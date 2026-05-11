@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lyrics Grader">
+<title>✦ Lyrics Grader</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inconsolata:wght@400;600&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070f;
+    --surface: rgba(255,255,255,0.03);
+    --border: rgba(251,191,36,0.18);
+    --accent: #fbbf24;
+    --accent2: #92400e;
+    --text: #fef9ee;
+    --muted: #9a8a6a;
+    --green: #34d399;
+    --error: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'Lora', Georgia, serif; min-height: 100vh; min-height: -webkit-fill-available; padding-bottom: env(safe-area-inset-bottom); overflow-x: hidden; }
+  .orb { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(80px); }
+  .orb1 { top: -15%; left: -15%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(146,64,14,0.3) 0%, transparent 70%); }
+  .orb2 { bottom: -20%; right: -15%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(251,191,36,0.12) 0%, transparent 70%); }
+  .container { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 0 16px 80px; }
+  .header { text-align: center; padding: 48px 20px 32px; border-bottom: 1px solid var(--border); }
+  .header-eyebrow { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 6px; color: var(--accent); text-transform: uppercase; margin-bottom: 12px; }
+  .header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 8vw, 3rem); font-weight: 900; line-height: 1.1; background: linear-gradient(135deg, #fef3c7, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { font-family: 'Inconsolata', monospace; font-size: 11px; letter-spacing: 3px; color: var(--muted); margin-top: 10px; text-transform: uppercase; }
+  .api-section { margin-top: 28px; background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); border-radius: 14px; padding: 18px; }
+  .api-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .api-row:last-of-type { margin-bottom: 0; }
+  .api-label { font-family: 'Inconsolata', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; min-width: 70px; }
+  .api-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-family: 'Inconsolata', monospace; font-size: 13px; outline: none; -webkit-appearance: none; }
+  .api-input:focus { border-color: var(--accent); }
+  .api-hint { font-family: 'Inconsolata', monospace; font-size: 10px; color: rgba(154,138,106,0.7); margin-top: 8px; letter-spacing: 1px; line-height: 1.6; }
+  .api-saved { font-family: 'Inconsolata', monospace; font-size: 10px; color: var(--green); margin-top: 6px; letter-spacing: 1px; display: none; }
+  .active-model { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 2px; margin-top: 8px; color: var(--accent); display: none; }
+  .section-label { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 5px; color: var(--accent); text-transform: uppercase; margin: 24px 0 8px; }
+  textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-family: 'Lora', Georgia, serif; font-size: 15px; resize: none; outline: none; -webkit-appearance: none; transition: border-color 0.2s; line-height: 1.6; }
+  textarea:focus { border-color: rgba(251,191,36,0.6); }
+  textarea::placeholder { color: var(--muted); font-style: italic; font-size: 13px; }
+  .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .toggle-btn { padding: 8px 14px; border-radius: 50px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inconsolata', monospace; font-size: 12px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; -webkit-appearance: none; }
+  .toggle-btn.active { border-color: var(--accent); background: rgba(251,191,36,0.12); color: #fef3c7; transform: scale(1.04); }
+  .grade-btn { width: 100%; margin-top: 28px; padding: 18px; border-radius: 14px; border: none; background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #1a0f00; font-family: 'Inconsolata', monospace; font-size: 14px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 30px rgba(251,191,36,0.2); transition: all 0.2s; -webkit-appearance: none; }
+  .grade-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .grade-btn:disabled { background: rgba(251,191,36,0.2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+  .rewrite-btn { width: 100%; margin-top: 14px; padding: 16px; border-radius: 14px; border: 1.5px solid rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); color: var(--green); font-family: 'Inconsolata', monospace; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; }
+  .rewrite-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .rewrite-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status { font-family: 'Inconsolata', monospace; font-size: 12px; letter-spacing: 2px; color: var(--accent); margin-top: 20px; text-align: center; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); display: none; }
+  .status.visible { display: block; }
+  .status.error { color: var(--error); border-color: rgba(248,113,113,0.3); }
+  .output-box { margin-top: 24px; border-radius: 16px; padding: 22px; animation: fadeUp 0.4s ease both; }
+  .grade-box { background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.25); }
+  .rewrite-box { background: rgba(52,211,153,0.04); border: 1px solid rgba(52,211,153,0.25); margin-top: 16px; }
+  .box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .box-title { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 5px; color: var(--accent); text-transform: uppercase; }
+  .rewrite-box .box-title { color: var(--green); }
+  .copy-btn { padding: 6px 16px; border-radius: 50px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inconsolata', monospace; font-size: 11px; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; min-width: 64px; text-align: center; }
+  .copy-btn.copied { color: #fef3c7; border-color: var(--accent); }
+  .score-display { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: var(--accent); line-height: 1; margin-bottom: 6px; }
+  .score-label { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 20px; }
+  .grade-section { margin-bottom: 20px; }
+  .grade-section-title { font-family: 'Inconsolata', monospace; font-size: 9px; letter-spacing: 4px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .grade-text { font-family: 'Lora', Georgia, serif; font-size: 14px; color: var(--text); line-height: 1.9; white-space: pre-wrap; }
+  .lyrics-text { font-family: 'Lora', Georgia, serif; font-size: 15px; line-height: 2; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .score-bar-wrap { height: 6px; background: rgba(251,191,36,0.12); border-radius: 50px; margin-bottom: 20px; overflow: hidden; }
+  .score-bar { height: 100%; border-radius: 50px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width 0.8s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  .pulsing { animation: pulse 1.2s ease infinite; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="container">
+  <div class="header">
+    <div class="header-eyebrow">✦ Lyrics Grader ✦</div>
+    <h1>Grade Your<br>Lyrics.</h1>
+    <p>Honest feedback · Powered by Groq + Gemini</p>
+  </div>
+
+  <div class="api-section" style="margin-top:28px">
+    <div class="section-label" style="margin-top:0">API Keys</div>
+    <div class="api-row">
+      <div class="api-label">GROQ</div>
+      <input type="password" id="api-groq" class="api-input" placeholder="gsk_...">
+    </div>
+    <div class="api-row">
+      <div class="api-label">GEMINI</div>
+      <input type="password" id="api-gemini" class="api-input" placeholder="AIza...">
+    </div>
+    <div class="api-hint">Groq is used first. Gemini kicks in automatically if Groq hits its limit.</div>
+    <div class="api-saved" id="api-saved">✓ Keys saved</div>
+    <div class="active-model" id="active-model"></div>
+    <button onclick="saveKeys()" style="margin-top:12px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:8px 16px;color:var(--accent);font-family:'Inconsolata',monospace;font-size:11px;letter-spacing:2px;cursor:pointer;">Save Keys</button>
+  </div>
+
+  <div class="section-label">Genre</div>
+  <div class="toggle-group" id="genre-group">
+    <button class="toggle-btn active" data-value="Pop">Pop</button>
+    <button class="toggle-btn" data-value="Hip-Hop">Hip-Hop</button>
+    <button class="toggle-btn" data-value="R&B">R&amp;B</button>
+    <button class="toggle-btn" data-value="Country">Country</button>
+    <button class="toggle-btn" data-value="Rock">Rock</button>
+    <button class="toggle-btn" data-value="EDM">EDM</button>
+    <button class="toggle-btn" data-value="Soul">Soul</button>
+    <button class="toggle-btn" data-value="Indie">Indie</button>
+    <button class="toggle-btn" data-value="Christian Rock">✝️ Christian Rock</button>
+    <button class="toggle-btn" data-value="Christian Worship">🙏 Christian Worship</button>
+  </div>
+
+  <div class="section-label">Paste Your Lyrics</div>
+  <textarea id="lyrics" rows="12" placeholder="Paste any lyrics here — from the generator, from Suno, your own writing, anything..."></textarea>
+
+  <div class="section-label">Context <span style="color:var(--muted);font-size:9px;letter-spacing:1px">(OPTIONAL)</span></div>
+  <textarea id="context" rows="2" placeholder="What's the song about? Any details help the grader give better feedback..."></textarea>
+
+  <button class="grade-btn" id="grade-btn" onclick="grade()">✦ &nbsp; Grade These Lyrics</button>
+  <div class="status" id="status"></div>
+  <div id="output"></div>
+</div>
+
+<script>
+const GROQ_URL="https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL="llama-3.3-70b-versatile";
+const GEMINI_MODEL="gemini-2.5-flash";
+const TIMEOUT_MS=60000;
+
+let lastLyrics='';
+let lastGrade='';
+let lastGenre='';
+
+window.addEventListener('load',()=>{
+  ['groq','gemini'].forEach(k=>{const v=localStorage.getItem(`key_${k}`);if(v)document.getElementById(`api-${k}`).value=v;});
+  if(localStorage.getItem('key_groq')||localStorage.getItem('key_gemini')){document.getElementById('api-saved').style.display='block';}
+});
+function saveKeys(){
+  ['groq','gemini'].forEach(k=>{const v=document.getElementById(`api-${k}`).value.trim();if(v)localStorage.setItem(`key_${k}`,v);});
+  document.getElementById('api-saved').style.display='block';
+}
+function getKey(k){return document.getElementById(`api-${k}`).value.trim();}
+document.querySelectorAll('.toggle-group').forEach(group=>{group.querySelectorAll('.toggle-btn').forEach(btn=>{btn.addEventListener('click',()=>{group.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');});});});
+function getSelected(id){return document.querySelector(`#${id} .toggle-btn.active`)?.dataset.value||'';}
+function copyText(text,btn){const fallback=()=>{const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');btn.textContent='✓ Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}catch(e){btn.textContent='Failed';}document.body.removeChild(ta);};if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>{btn.textContent='✓ Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}).catch(fallback);}else{fallback();}}
+function setStatus(msg,isError=false){const el=document.getElementById('status');el.textContent=msg;el.className='status visible'+(isError?' error':' pulsing');}
+function clearStatus(){document.getElementById('status').className='status';}
+function showModel(msg){const el=document.getElementById('active-model');el.textContent=msg;el.style.display='block';}
+function escapeHTML(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function fetchWithTimeout(url,options,ms){
+  return Promise.race([fetch(url,options),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Request timed out')),ms))]);
+}
+
+async function aiCall(prompt,temperature=0.7,maxTokens=1000){
+  const groqKey=getKey('groq');
+  const geminiKey=getKey('gemini');
+  if(groqKey){
+    try{
+      const res=await fetchWithTimeout(GROQ_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${groqKey}`},body:JSON.stringify({model:GROQ_MODEL,messages:[{role:'user',content:prompt}],max_tokens:maxTokens,temperature,top_p:0.9})},TIMEOUT_MS);
+      if(res.ok){const data=await res.json();showModel('✦ Using Groq');return data.choices[0].message.content.trim();}
+      const err=await res.json();
+      const isRate=err?.error?.message?.toLowerCase().includes('rate limit')||String(res.status).startsWith('429');
+      if(!isRate)throw new Error(err?.error?.message||`Groq error ${res.status}`);
+      showModel('⚡ Groq limit — switching to Gemini');
+    }catch(e){
+      if(!e.message.toLowerCase().includes('rate limit')&&!e.message.includes('429')){if(!geminiKey)throw e;}
+    }
+  }
+  if(geminiKey){
+    const res=await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature,maxOutputTokens:maxTokens}})},TIMEOUT_MS);
+    if(!res.ok){const err=await res.json();throw new Error(err?.error?.message||`Gemini error ${res.status}`);}
+    const data=await res.json();
+    const candidate=data.candidates?.[0];
+    let text=candidate?.content?.parts?.[0]?.text||candidate?.output||'';
+    if(!text)throw new Error('Empty response from Gemini');
+    text=text.replace(/\*\*[\s\S]*?\*\*/g,'').replace(/\*[^*]+\*/g,'').replace(/_{1,2}[^_]+_{1,2}/g,'').replace(/^\s*---+\s*$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
+    showModel('✦ Using Gemini');
+    return text;
+  }
+  throw new Error('No API key — add your Groq or Gemini key above');
+}
+
+function buildGradePrompt(lyrics,genre,context){
+  return `You are a world class song editor and critic. Grade these lyrics honestly and specifically. Do not be encouraging for its own sake — be accurate.
+
+GENRE: ${genre}
+${context?`CONTEXT: ${context}`:''}
+
+LYRICS:
+${lyrics}
+
+Respond in this exact format:
+
+SCORE: [X/10]
+ONE LINE REASON: [one sentence explaining the score]
+
+STORY: [Can you describe what this song is about in one sentence? Does it tell a causal story or just describe a mood? Be direct.]
+
+STRONGEST 3 LINES:
+1. "[exact quote]" — [one sentence why it works]
+2. "[exact quote]" — [one sentence why it works]
+3. "[exact quote]" — [one sentence why it works]
+
+WEAKEST 3 LINES:
+1. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
+2. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
+3. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
+
+CHORUS VERDICT: [Does the chorus feel earned and specific to this song, or could it belong to any song in this genre? One sentence.]
+
+GENRE AUTHENTICITY: [Does this sound like authentic ${genre} or does it feel generic? One sentence.]
+
+FINGERPRINT SCORE: [How many lines feel irreplaceable — specific only to this song? Give a ratio like 4/16 lines and explain what that means for the song.]
+
+WHAT WOULD MAKE THIS A 9 OR 10: [One specific paragraph. What is the single biggest thing missing.]`;
+}
+
+function buildRewritePrompt(lyrics,grade,genre){
+  return `You are a world class songwriter. You have feedback on a song draft. Apply every specific suggestion from the feedback to produce a better version.
+
+GENRE: ${genre}
+
+ORIGINAL LYRICS:
+${lyrics}
+
+EDITOR FEEDBACK:
+${grade}
+
+RULES:
+- Keep every line the editor praised as strongest — do not touch them
+- Rewrite every weak line using the specific rewrites suggested in the feedback
+- If the chorus was flagged as generic, rebuild it around the most specific image in the verses
+- Keep all section labels exactly: [Verse 1], [Pre-Chorus], [Chorus], etc
+- Do not add or remove sections
+- Do not add commentary
+- Output the complete rewritten song only
+
+Every line must be irreplaceable — specific only to this song. No stock clichés, no emotion naming, no identity stacking.`;
+}
+
+function parseScore(gradeText){
+  const match=gradeText.match(/SCORE:\s*(\d+(?:\.\d+)?)\s*\/\s*10/i);
+  return match?parseFloat(match[1]):null;
+}
+
+function renderGrade(gradeText,score){
+  const pct=score?(score/10*100):0;
+  const scoreColor=score>=8?'#34d399':score>=6?'#fbbf24':'#f87171';
+  return `<div class="output-box grade-box">
+    <div class="box-header"><div class="box-title">✦ Grade</div><button class="copy-btn" id="copy-grade">Copy</button></div>
+    ${score!==null?`<div class="score-display" style="color:${scoreColor}">${score}<span style="font-size:1.2rem;color:var(--muted)">/10</span></div>
+    <div class="score-label">Overall Score</div>
+    <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%"></div></div>`:''}
+    <div class="grade-text">${escapeHTML(gradeText)}</div>
+  </div>`;
+}
+
+async function grade(){
+  const lyrics=document.getElementById('lyrics').value.trim();
+  const context=document.getElementById('context').value.trim();
+  const genre=getSelected('genre-group');
+  if(!getKey('groq')&&!getKey('gemini')){setStatus('⚠ Add at least one API key above',true);return;}
+  if(!lyrics){setStatus('⚠ Paste some lyrics first',true);return;}
+  document.getElementById('grade-btn').disabled=true;
+  document.getElementById('output').innerHTML='';
+  setStatus('✦ Grading your lyrics...');
+  try{
+    const gradeText=await aiCall(buildGradePrompt(lyrics,genre,context),0.7,1000);
+    const score=parseScore(gradeText);
+    lastLyrics=lyrics;
+    lastGrade=gradeText;
+    lastGenre=genre;
+    clearStatus();
+    document.getElementById('output').innerHTML=renderGrade(gradeText,score)+
+      `<button class="rewrite-btn" id="rewrite-btn" onclick="rewrite()">✦ &nbsp; Rewrite With Fixes</button>
+       <div id="rewrite-output"></div>`;
+    document.getElementById('copy-grade').addEventListener('click',function(){copyText(gradeText,this);});
+    document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){setStatus('⚠ '+e.message,true);}
+  document.getElementById('grade-btn').disabled=false;
+}
+
+async function rewrite(){
+  if(!lastLyrics||!lastGrade)return;
+  const btn=document.getElementById('rewrite-btn');
+  btn.disabled=true;
+  const out=document.getElementById('rewrite-output');
+  out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Rewriting with fixes applied...</div>`;
+  try{
+    const rewritten=await aiCall(buildRewritePrompt(lastLyrics,lastGrade,lastGenre),0.95,1400);
+    out.innerHTML=`<div class="output-box rewrite-box">
+      <div class="box-header"><div class="box-title">✦ Rewrite — Fixed</div><button class="copy-btn" id="copy-rewrite">Copy</button></div>
+      <div class="lyrics-text">${escapeHTML(rewritten)}</div>
+    </div>`;
+    document.getElementById('copy-rewrite').addEventListener('click',function(){copyText(rewritten,this);});
+    out.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){out.innerHTML=`<div class="status visible error" style="margin-top:16px">⚠ ${e.message}</div>`;}
+  btn.disabled=false;
+}
+</script>
+</body>
+</html>
