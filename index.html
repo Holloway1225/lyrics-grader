@@ -52,6 +52,9 @@
   .rewrite-btn { width: 100%; margin-top: 14px; padding: 16px; border-radius: 14px; border: 1.5px solid rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); color: var(--green); font-family: 'Inconsolata', monospace; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; }
   .rewrite-btn:active { transform: scale(0.98); opacity: 0.9; }
   .rewrite-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .regrade-btn { width: 100%; margin-top: 14px; padding: 16px; border-radius: 14px; border: 1.5px solid rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); color: var(--accent); font-family: 'Inconsolata', monospace; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; }
+  .regrade-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .regrade-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .status { font-family: 'Inconsolata', monospace; font-size: 12px; letter-spacing: 2px; color: var(--accent); margin-top: 20px; text-align: center; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); display: none; }
   .status.visible { display: block; }
   .status.error { color: var(--error); border-color: rgba(248,113,113,0.3); }
@@ -65,12 +68,11 @@
   .copy-btn.copied { color: #fef3c7; border-color: var(--accent); }
   .score-display { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: var(--accent); line-height: 1; margin-bottom: 6px; }
   .score-label { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 20px; }
-  .grade-section { margin-bottom: 20px; }
-  .grade-section-title { font-family: 'Inconsolata', monospace; font-size: 9px; letter-spacing: 4px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .grade-text { font-family: 'Lora', Georgia, serif; font-size: 14px; color: var(--text); line-height: 1.9; white-space: pre-wrap; }
   .lyrics-text { font-family: 'Lora', Georgia, serif; font-size: 15px; line-height: 2; color: var(--text); white-space: pre-wrap; word-break: break-word; }
   .score-bar-wrap { height: 6px; background: rgba(251,191,36,0.12); border-radius: 50px; margin-bottom: 20px; overflow: hidden; }
   .score-bar { height: 100%; border-radius: 50px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width 0.8s ease; }
+  .iteration-badge { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
   .pulsing { animation: pulse 1.2s ease infinite; }
@@ -83,7 +85,7 @@
   <div class="header">
     <div class="header-eyebrow">✦ Lyrics Grader ✦</div>
     <h1>Grade Your<br>Lyrics.</h1>
-    <p>Honest feedback · Powered by Groq + Gemini</p>
+    <p>Chasing 10 · Powered by Groq + Gemini</p>
   </div>
 
   <div class="api-section" style="margin-top:28px">
@@ -133,9 +135,7 @@ const GROQ_MODEL="llama-3.3-70b-versatile";
 const GEMINI_MODEL="gemini-2.5-flash";
 const TIMEOUT_MS=60000;
 
-let lastLyrics='';
-let lastGrade='';
-let lastGenre='';
+let state={lyrics:'',grade:'',genre:'',rewritten:'',iteration:0};
 
 window.addEventListener('load',()=>{
   ['groq','gemini'].forEach(k=>{const v=localStorage.getItem(`key_${k}`);if(v)document.getElementById(`api-${k}`).value=v;});
@@ -158,7 +158,7 @@ function fetchWithTimeout(url,options,ms){
   return Promise.race([fetch(url,options),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Request timed out')),ms))]);
 }
 
-async function aiCall(prompt,temperature=0.7,maxTokens=1000){
+async function aiCall(prompt,temperature=0.7,maxTokens=1200){
   const groqKey=getKey('groq');
   const geminiKey=getKey('gemini');
   if(groqKey){
@@ -187,62 +187,78 @@ async function aiCall(prompt,temperature=0.7,maxTokens=1000){
   throw new Error('No API key — add your Groq or Gemini key above');
 }
 
-function buildGradePrompt(lyrics,genre,context){
-  return `You are a world class song editor and critic. Grade these lyrics honestly and specifically. Do not be encouraging for its own sake — be accurate.
+function buildGradePrompt(lyrics,genre,context,iteration){
+  const iterNote=iteration>0?`\nThis is revision #${iteration}. The previous version scored lower. Be harder on what still isn't working. Do not give credit for progress — only grade what's in front of you.\n`:'';
+  return `You are a world class song producer and editor. Your job is not just to grade — your job is to get this song to a 10. You are not finished until it gets there. Be a collaborator chasing perfection, not a critic writing a review.
 
 GENRE: ${genre}
 ${context?`CONTEXT: ${context}`:''}
-
+${iterNote}
 LYRICS:
 ${lyrics}
 
 Respond in this exact format:
 
 SCORE: [X/10]
-ONE LINE REASON: [one sentence explaining the score]
+ONE LINE REASON: [one sentence — be brutally honest]
 
-STORY: [Can you describe what this song is about in one sentence? Does it tell a causal story or just describe a mood? Be direct.]
+STORY: [One sentence: what is this song about? Does it tell a causal story or just describe a mood?]
 
 STRONGEST 3 LINES:
-1. "[exact quote]" — [one sentence why it works]
-2. "[exact quote]" — [one sentence why it works]
-3. "[exact quote]" — [one sentence why it works]
+1. "[exact quote]" — [why it works — be specific about the craft]
+2. "[exact quote]" — [why it works]
+3. "[exact quote]" — [why it works]
 
 WEAKEST 3 LINES:
-1. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
-2. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
-3. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
+1. "[exact quote]" — [exactly why it fails] — REWRITE: [specific replacement that fixes it]
+2. "[exact quote]" — [exactly why it fails] — REWRITE: [specific replacement]
+3. "[exact quote]" — [exactly why it fails] — REWRITE: [specific replacement]
 
-CHORUS VERDICT: [Does the chorus feel earned and specific to this song, or could it belong to any song in this genre? One sentence.]
+CHORUS VERDICT: [Does the chorus feel earned and specific to this song or could it belong to any song? If it's weak — write what the chorus SHOULD be.]
 
-GENRE AUTHENTICITY: [Does this sound like authentic ${genre} or does it feel generic? One sentence.]
+CRAFT OPPORTUNITIES:
+- SENSORY DETAIL: What specific sound, smell, texture or physical sensation is missing that would make this world more immersive?
+- HOOK: What is the single line that should be the hook but isn't landing yet? What would make it stick?
+- ESCALATION: Where does a section repeat when it should escalate? What should it escalate to?
+- SPECIFICITY: What is the most generic image in this song? Replace it with something only this song could have.
+- STRUCTURE: Is there a missed opportunity to shift perspective, time, or emotional register?
 
-FINGERPRINT SCORE: [How many lines feel irreplaceable — specific only to this song? Give a ratio like 4/16 lines and explain what that means for the song.]
+FINGERPRINT SCORE: [X/total lines feel irreplaceable. Give the ratio and explain what it means.]
 
-WHAT WOULD MAKE THIS A 9 OR 10: [One specific paragraph. What is the single biggest thing missing.]`;
+PATH TO 10:
+List exactly what needs to change to reach a 10. Be surgical — not general.
+1. [Specific change #1 — quote the line, explain the fix, provide the rewrite]
+2. [Specific change #2]
+3. [Specific change #3]
+4. [Specific change #4 if needed]
+5. [Specific change #5 if needed]
+
+Do not say "consider adding specificity." Say "replace [exact line] with [exact new line] because [exact reason]."`;
 }
 
-function buildRewritePrompt(lyrics,grade,genre){
-  return `You are a world class songwriter. You have feedback on a song draft. Apply every specific suggestion from the feedback to produce a better version.
+function buildRewritePrompt(lyrics,grade,genre,iteration){
+  return `You are a world class songwriter. You have detailed editorial feedback on a song. Your job is to apply every single surgical fix from the PATH TO 10 section and produce a version that scores higher than the last.
 
 GENRE: ${genre}
+ITERATION: ${iteration+1} — each rewrite must be meaningfully better than the last. Do not make cosmetic changes. Make real ones.
 
-ORIGINAL LYRICS:
+CURRENT LYRICS:
 ${lyrics}
 
-EDITOR FEEDBACK:
+EDITORIAL FEEDBACK:
 ${grade}
 
 RULES:
-- Keep every line the editor praised as strongest — do not touch them
-- Rewrite every weak line using the specific rewrites suggested in the feedback
-- If the chorus was flagged as generic, rebuild it around the most specific image in the verses
-- Keep all section labels exactly: [Verse 1], [Pre-Chorus], [Chorus], etc
-- Do not add or remove sections
-- Do not add commentary
-- Output the complete rewritten song only
-
-Every line must be irreplaceable — specific only to this song. No stock clichés, no emotion naming, no identity stacking.`;
+1. Apply every fix listed in PATH TO 10 — these are non-negotiable
+2. Apply the specific rewrites given for the WEAKEST 3 LINES
+3. If the CHORUS VERDICT suggested a new chorus — use it
+4. Keep every line from STRONGEST 3 LINES — do not touch them
+5. Apply CRAFT OPPORTUNITIES — add the missing sensory detail, fix the escalation, replace the generic image
+6. Every line must be irreplaceable — specific only to this song
+7. No stock clichés, no emotion naming, no identity stacking
+8. Keep all section labels exactly: [Verse 1], [Pre-Chorus], [Chorus], etc
+9. Do not add commentary or explanations
+10. Output the complete rewritten song only — every section`;
 }
 
 function parseScore(gradeText){
@@ -250,13 +266,15 @@ function parseScore(gradeText){
   return match?parseFloat(match[1]):null;
 }
 
-function renderGrade(gradeText,score){
+function renderGrade(gradeText,score,iteration){
   const pct=score?(score/10*100):0;
-  const scoreColor=score>=8?'#34d399':score>=6?'#fbbf24':'#f87171';
+  const scoreColor=score>=9?'#34d399':score>=7?'#fbbf24':'#f87171';
+  const iterLabel=iteration>0?`<div class="iteration-badge">✦ Revision ${iteration}</div>`:'';
   return `<div class="output-box grade-box">
-    <div class="box-header"><div class="box-title">✦ Grade</div><button class="copy-btn" id="copy-grade">Copy</button></div>
+    ${iterLabel}
+    <div class="box-header"><div class="box-title">✦ Grade</div><button class="copy-btn" id="copy-grade-${iteration}">Copy</button></div>
     ${score!==null?`<div class="score-display" style="color:${scoreColor}">${score}<span style="font-size:1.2rem;color:var(--muted)">/10</span></div>
-    <div class="score-label">Overall Score</div>
+    <div class="score-label">${score>=9?'🔥 Almost perfect':score>=8?'✦ Strong — keep pushing':score>=7?'Getting there — keep going':'Needs real work'}</div>
     <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%"></div></div>`:''}
     <div class="grade-text">${escapeHTML(gradeText)}</div>
   </div>`;
@@ -270,36 +288,51 @@ async function grade(){
   if(!lyrics){setStatus('⚠ Paste some lyrics first',true);return;}
   document.getElementById('grade-btn').disabled=true;
   document.getElementById('output').innerHTML='';
+  state={lyrics,grade:'',genre,rewritten:'',iteration:0};
   setStatus('✦ Grading your lyrics...');
   try{
-    const gradeText=await aiCall(buildGradePrompt(lyrics,genre,context),0.7,1000);
+    const gradeText=await aiCall(buildGradePrompt(lyrics,genre,context,0),0.7,1200);
     const score=parseScore(gradeText);
-    lastLyrics=lyrics;
-    lastGrade=gradeText;
-    lastGenre=genre;
+    state.grade=gradeText;
     clearStatus();
-    document.getElementById('output').innerHTML=renderGrade(gradeText,score)+
-      `<button class="rewrite-btn" id="rewrite-btn" onclick="rewrite()">✦ &nbsp; Rewrite With Fixes</button>
+    document.getElementById('output').innerHTML=
+      renderGrade(gradeText,score,0)+
+      `<button class="rewrite-btn" id="rewrite-btn" onclick="rewrite()">✦ &nbsp; Rewrite Toward 10</button>
        <div id="rewrite-output"></div>`;
-    document.getElementById('copy-grade').addEventListener('click',function(){copyText(gradeText,this);});
+    document.getElementById(`copy-grade-0`).addEventListener('click',function(){copyText(gradeText,this);});
     document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){setStatus('⚠ '+e.message,true);}
   document.getElementById('grade-btn').disabled=false;
 }
 
 async function rewrite(){
-  if(!lastLyrics||!lastGrade)return;
   const btn=document.getElementById('rewrite-btn');
   btn.disabled=true;
   const out=document.getElementById('rewrite-output');
-  out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Rewriting with fixes applied...</div>`;
+  out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Rewriting toward 10...</div>`;
   try{
-    const rewritten=await aiCall(buildRewritePrompt(lastLyrics,lastGrade,lastGenre),0.95,1400);
-    out.innerHTML=`<div class="output-box rewrite-box">
-      <div class="box-header"><div class="box-title">✦ Rewrite — Fixed</div><button class="copy-btn" id="copy-rewrite">Copy</button></div>
-      <div class="lyrics-text">${escapeHTML(rewritten)}</div>
-    </div>`;
-    document.getElementById('copy-rewrite').addEventListener('click',function(){copyText(rewritten,this);});
+    const currentLyrics=state.rewritten||state.lyrics;
+    const rewritten=await aiCall(buildRewritePrompt(currentLyrics,state.grade,state.genre,state.iteration),0.95,1400);
+    state.rewritten=rewritten;
+    state.iteration++;
+    const context=document.getElementById('context').value.trim();
+
+    // Auto-regrade the rewrite
+    out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Grading the rewrite...</div>`;
+    const newGrade=await aiCall(buildGradePrompt(rewritten,state.genre,context,state.iteration),0.7,1200);
+    const newScore=parseScore(newGrade);
+    state.grade=newGrade;
+
+    out.innerHTML=
+      `<div class="output-box rewrite-box">
+        <div class="box-header"><div class="box-title">✦ Rewrite — Pass ${state.iteration}</div><button class="copy-btn" id="copy-rewrite-${state.iteration}">Copy</button></div>
+        <div class="lyrics-text">${escapeHTML(rewritten)}</div>
+      </div>`+
+      renderGrade(newGrade,newScore,state.iteration)+
+      `${newScore&&newScore<9.5?`<button class="rewrite-btn" id="rewrite-btn" onclick="rewrite()">✦ &nbsp; Push Further</button>`:`<div style="font-family:'Inconsolata',monospace;font-size:11px;letter-spacing:3px;color:var(--green);text-align:center;margin-top:16px;padding:14px;border:1px solid rgba(52,211,153,0.3);border-radius:10px">✦ This is as good as it gets — take it to Suno</div>`}
+       <div id="rewrite-output"></div>`;
+
+    document.getElementById(`copy-rewrite-${state.iteration}`).addEventListener('click',function(){copyText(rewritten,this);});
     out.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){out.innerHTML=`<div class="status visible error" style="margin-top:16px">⚠ ${e.message}</div>`;}
   btn.disabled=false;
