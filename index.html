@@ -19,6 +19,7 @@
     --muted: #9a8a6a;
     --green: #34d399;
     --error: #f87171;
+    --purple: #a855f7;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background: var(--bg); color: var(--text); font-family: 'Lora', Georgia, serif; min-height: 100vh; min-height: -webkit-fill-available; padding-bottom: env(safe-area-inset-bottom); overflow-x: hidden; }
@@ -51,10 +52,10 @@
   .grade-btn:disabled { background: rgba(251,191,36,0.2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
   .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
   .rewrite-btn { padding: 16px; border-radius: 14px; border: 1.5px solid rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); color: var(--green); font-family: 'Inconsolata', monospace; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; }
-  .rewrite-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .rewrite-btn:active { transform: scale(0.98); }
   .rewrite-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .regrade-btn { padding: 16px; border-radius: 14px; border: 1.5px solid rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); color: var(--accent); font-family: 'Inconsolata', monospace; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; }
-  .regrade-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .regrade-btn:active { transform: scale(0.98); }
   .regrade-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .status { font-family: 'Inconsolata', monospace; font-size: 12px; letter-spacing: 2px; color: var(--accent); margin-top: 20px; text-align: center; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); display: none; }
   .status.visible { display: block; }
@@ -62,6 +63,18 @@
   .output-box { margin-top: 24px; border-radius: 16px; padding: 22px; animation: fadeUp 0.4s ease both; }
   .grade-box { background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.25); }
   .rewrite-box { background: rgba(52,211,153,0.04); border: 1px solid rgba(52,211,153,0.25); margin-top: 16px; }
+  .options-box { background: rgba(168,85,247,0.04); border: 1px solid rgba(168,85,247,0.25); margin-top: 16px; border-radius: 16px; padding: 22px; animation: fadeUp 0.4s ease both; }
+  .options-title { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 5px; color: var(--purple); text-transform: uppercase; margin-bottom: 6px; }
+  .options-subtitle { font-family: 'Lora', Georgia, serif; font-size: 13px; color: var(--muted); font-style: italic; margin-bottom: 20px; line-height: 1.6; }
+  .options-question { margin-bottom: 20px; }
+  .options-question-label { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
+  .option-btn { width: 100%; text-align: left; background: rgba(0,0,0,0.2); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--muted); font-family: 'Lora', Georgia, serif; font-size: 14px; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; line-height: 1.5; -webkit-appearance: none; }
+  .option-btn:last-of-type { margin-bottom: 0; }
+  .option-btn.selected { border-color: var(--purple); background: rgba(168,85,247,0.12); color: #f0abfc; }
+  .option-btn:active { transform: scale(0.99); }
+  .build-btn { width: 100%; margin-top: 16px; padding: 16px; border-radius: 14px; border: none; background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; font-family: 'Inconsolata', monospace; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 20px rgba(168,85,247,0.25); transition: all 0.2s; -webkit-appearance: none; }
+  .build-btn:active { transform: scale(0.98); }
+  .build-btn:disabled { background: rgba(168,85,247,0.2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
   .box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .box-title { font-family: 'Inconsolata', monospace; font-size: 10px; letter-spacing: 5px; color: var(--accent); text-transform: uppercase; }
   .rewrite-box .box-title { color: var(--green); }
@@ -134,10 +147,14 @@
 <script>
 const GROQ_URL="https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL="llama-3.3-70b-versatile";
-const GEMINI_MODEL="gemini-2.5-flash";
-const TIMEOUT_MS=60000;
+const GEMINI_MODEL="gemini-2.5-flash-lite";
+const TIMEOUT_MS=120000;
 
-let state={lyrics:'',grade:'',genre:'',context:'',rewritten:'',iteration:0,lastScore:null};
+let state={
+  lyrics:'', grade:'', genre:'', context:'',
+  rewritten:'', iteration:0, lastScore:null,
+  selectedOptions:{}
+};
 
 window.addEventListener('load',()=>{
   ['groq','gemini'].forEach(k=>{const v=localStorage.getItem(`key_${k}`);if(v)document.getElementById(`api-${k}`).value=v;});
@@ -155,7 +172,10 @@ function setStatus(msg,isError=false){const el=document.getElementById('status')
 function clearStatus(){document.getElementById('status').className='status';}
 function showModel(msg){const el=document.getElementById('active-model');el.textContent=msg;el.style.display='block';}
 function escapeHTML(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fetchWithTimeout(url,options,ms){return Promise.race([fetch(url,options),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Request timed out')),ms))]);}
+
+function fetchWithTimeout(url,options,ms){
+  return Promise.race([fetch(url,options),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Request timed out — please try again')),ms))]);
+}
 
 async function aiCall(prompt,temperature=0.7,maxTokens=1200){
   const groqKey=getKey('groq');
@@ -173,22 +193,37 @@ async function aiCall(prompt,temperature=0.7,maxTokens=1200){
     }
   }
   if(geminiKey){
-    const res=await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature,maxOutputTokens:maxTokens}})},TIMEOUT_MS);
-    if(!res.ok){const err=await res.json();throw new Error(err?.error?.message||`Gemini error ${res.status}`);}
-    const data=await res.json();
-    const candidate=data.candidates?.[0];
-    let text=candidate?.content?.parts?.[0]?.text||candidate?.output||'';
-    if(!text)throw new Error('Empty response from Gemini');
-    text=text.replace(/\*\*[\s\S]*?\*\*/g,'').replace(/\*[^*]+\*/g,'').replace(/_{1,2}[^_]+_{1,4}/g,'').replace(/^\s*---+\s*$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
-    showModel('✦ Using Gemini');
-    return text;
+    let attempts=0;
+    while(attempts<3){
+      try{
+        const res=await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature,maxOutputTokens:maxTokens}})},TIMEOUT_MS);
+        if(res.ok){
+          const data=await res.json();
+          const candidate=data.candidates?.[0];
+          let text=candidate?.content?.parts?.[0]?.text||candidate?.output||'';
+          if(!text)throw new Error('Empty response from Gemini');
+          text=text.replace(/\*\*[\s\S]*?\*\*/g,'').replace(/\*[^*]+\*/g,'').replace(/_{1,2}[^_]+_{1,2}/g,'').replace(/^\s*---+\s*$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
+          showModel('✦ Using Gemini');
+          return text;
+        }
+        const err=await res.json();
+        const isOverload=err?.error?.message?.toLowerCase().includes('overload')||err?.error?.message?.toLowerCase().includes('high demand')||res.status===503;
+        if(isOverload&&attempts<2){attempts++;showModel(`⚡ Gemini busy — retrying (${attempts}/3)...`);await new Promise(r=>setTimeout(r,5000));continue;}
+        throw new Error(err?.error?.message||`Gemini error ${res.status}`);
+      }catch(e){
+        const isOverload=e.message.toLowerCase().includes('overload')||e.message.toLowerCase().includes('high demand');
+        if(isOverload&&attempts<2){attempts++;await new Promise(r=>setTimeout(r,5000));continue;}
+        throw e;
+      }
+    }
+    throw new Error('Gemini is experiencing high demand — please try again in a few minutes');
   }
   throw new Error('No API key — add your Groq or Gemini key above');
 }
 
 function buildGradePrompt(lyrics,genre,context,iteration){
-  const iterNote=iteration>0?`\nThis is revision #${iteration}. Be harder than the last grade. Do not give credit for minor word swaps. Only raise the score if the song is genuinely more specific, more narrative, and more irreplaceable than before.\n`:'';
-  return `You are a world class song producer and editor working with a songwriter to get their song to a 10. You are a collaborator chasing perfection — not a critic writing a review. Your job is not done until this scores a 9 or above.
+  const iterNote=iteration>0?`\nThis is revision #${iteration}. Be harder than last time. Only raise the score if the song is genuinely more specific and narrative than before.\n`:'';
+  return `You are a world class song producer chasing a 10. Be brutally honest.
 
 GENRE: ${genre}
 ${context?`CONTEXT: ${context}`:''}
@@ -199,45 +234,94 @@ ${lyrics}
 Respond in this exact format:
 
 SCORE: [X/10]
-ONE LINE REASON: [brutally honest one sentence]
+ONE LINE REASON: [brutal honesty]
 
-STORY: [One sentence: what is this song about? Causal story or mood board?]
+STORY: [One sentence: causal story or mood board?]
 
 STRONGEST 3 LINES:
-1. "[exact quote]" — [specific craft reason why it works]
-2. "[exact quote]" — [specific craft reason]
-3. "[exact quote]" — [specific craft reason]
+1. "[exact quote]" — [why it works]
+2. "[exact quote]" — [why it works]
+3. "[exact quote]" — [why it works]
 
 WEAKEST 3 LINES:
-1. "[exact quote]" — [exactly why it fails] — REWRITE: [specific replacement]
-2. "[exact quote]" — [exactly why it fails] — REWRITE: [specific replacement]
-3. "[exact quote]" — [exactly why it fails] — REWRITE: [specific replacement]
+1. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
+2. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
+3. "[exact quote]" — [why it fails] — REWRITE: [specific replacement]
 
-CHORUS VERDICT: [Specific to this song or generic? If generic — write what the chorus SHOULD be, fully.]
+CHORUS VERDICT: [Specific or generic? If generic — write what it should be.]
 
 CRAFT OPPORTUNITIES:
-- SENSORY DETAIL: What specific sound, smell, texture or physical sensation would make this world more immersive? Give an example line.
-- HOOK: What line should be the hook but isn't landing? Rewrite it.
-- ESCALATION: Where does a section repeat when it should escalate? What should it escalate to specifically?
-- CHARACTER: Is there a named character or specific person in this song? If not — invent one and show how one line would change with their name and a specific detail.
-- SPECIFICITY: What is the single most generic image? Replace it with something only this song could have.
+- SENSORY DETAIL: [What's missing? Give an example line.]
+- HOOK: [What line should be the hook? Rewrite it.]
+- ESCALATION: [Where does it repeat instead of escalate? What should it become?]
+- CHARACTER: [Is there a named character? If not — suggest 3 specific fictional options with name + one detail each.]
+- SPECIFICITY: [Most generic image? Replace it.]
 
-FINGERPRINT SCORE: [X out of total lines are irreplaceable. Give ratio and one sentence on what it means.]
+FINGERPRINT SCORE: [X/total lines irreplaceable. One sentence on what that means.]
 
 PATH TO 10:
-These are the exact changes needed. Apply all of them in the rewrite.
-1. [Quote exact weak line → exact replacement → exact reason it's better]
-2. [Quote exact weak line → exact replacement → exact reason]
-3. [Quote exact weak line → exact replacement → exact reason]
-4. [Quote exact weak line → exact replacement → exact reason]
-5. [Structural or narrative change needed — be specific]`;
+1. [Exact weak line → exact replacement → why it's better]
+2. [Exact weak line → exact replacement → why it's better]
+3. [Exact weak line → exact replacement → why it's better]
+4. [Exact weak line → exact replacement → why it's better]
+5. [Structural or narrative change needed]`;
 }
 
-function buildRewritePrompt(lyrics,grade,genre,iteration){
-  return `You are a world class songwriter rewriting a draft to push it from a 7 to a 9 or 10. You have surgical editorial feedback. Your job is to make BOLD changes — not cosmetic word swaps.
+function buildOptionsPrompt(lyrics,grade,genre){
+  return `You are helping a songwriter break past a 7.5. Based on the grade below, generate targeted multiple choice options to unlock the next level of specificity.
 
 GENRE: ${genre}
-PASS: ${iteration+1}
+
+LYRICS:
+${lyrics}
+
+GRADE:
+${grade}
+
+Generate exactly 3 questions with exactly 3 options each. Make every option specific, vivid, and different from the others. No generic options. Base them directly on what the grade flagged as missing.
+
+Return ONLY valid JSON in this exact format, nothing else:
+{
+  "questions": [
+    {
+      "id": "character",
+      "question": "Who is the main character?",
+      "options": [
+        "Ray, 54, been on the same press for 19 years — his son just got hired at the same plant the week before layoffs were announced",
+        "Donna, night shift supervisor, single mom — she's the one who has to post the layoff list on the break room door",
+        "Marcus, 23, youngest on the floor — first in his family not to go to college, took the job to prove something"
+      ]
+    },
+    {
+      "id": "moment",
+      "question": "What is the single most specific moment in this song?",
+      "options": [
+        "The morning the new automated arm gets bolted in next to his station — it does his job in 8 seconds flat",
+        "The night shift meeting where the foreman won't make eye contact with anyone",
+        "3am, the plant floor empty except for the machines running on their own, humming like nothing happened"
+      ]
+    },
+    {
+      "id": "ending",
+      "question": "How does it end for them?",
+      "options": [
+        "He clocks out for the last time, sits in his truck in the parking lot for 45 minutes, doesn't go home",
+        "She takes the severance check, drives to the plant one last time just to look at it, doesn't get out of the car",
+        "He stays — the only one left — now maintaining the machines that replaced everyone he knew"
+      ]
+    }
+  ]
+}`;
+}
+
+function buildRewriteWithOptionsPrompt(lyrics,grade,genre,options){
+  const optionsText=Object.entries(options).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join('\n');
+  return `You are a world class songwriter. Rewrite this song using the specific details provided. These details are the raw material that will push it past 7.5. Use them concretely — not as themes, as actual scenes and moments in the lyrics.
+
+GENRE: ${genre}
+
+SPECIFIC DETAILS TO BUILD FROM:
+${optionsText}
 
 CURRENT LYRICS:
 ${lyrics}
@@ -246,45 +330,50 @@ EDITORIAL FEEDBACK:
 ${grade}
 
 MANDATORY RULES:
+1. The character detail must appear in the song — use their name and specific situation
+2. The moment must be the anchor of Verse 1 or Verse 2 — describe it specifically
+3. The ending must be the Bridge or Outro — use the exact action described
+4. Apply every fix from PATH TO 10
+5. Apply every WEAKEST LINE rewrite
+6. Keep every STRONGEST LINE untouched
+7. Add the missing SENSORY DETAIL from CRAFT OPPORTUNITIES
+8. Fix the ESCALATION — pre-chorus 2 must be different from pre-chorus 1
+9. Every line must be irreplaceable — specific only to this song
+10. No stock clichés, no emotion naming, no identity stacking
+11. Keep all section labels: [Verse 1], [Pre-Chorus], [Chorus], etc
+12. Output the COMPLETE rewritten song. Every section. Do not truncate.`;
+}
 
-1. APPLY EVERY FIX IN PATH TO 10
-These are non-negotiable. Every single one. Use the exact replacement lines provided.
+function buildSimpleRewritePrompt(lyrics,grade,genre){
+  return `You are a world class songwriter. Apply every surgical fix from the feedback to produce a better version.
 
-2. APPLY WEAKEST LINE REWRITES
-Replace every flagged weak line with the specific rewrite provided in the feedback.
+GENRE: ${genre}
 
-3. USE THE SUGGESTED CHORUS
-If CHORUS VERDICT provided a new chorus — use it exactly or improve on it.
+CURRENT LYRICS:
+${lyrics}
 
-4. ADD A CHARACTER IF FLAGGED
-If CRAFT OPPORTUNITIES flagged missing character — invent a specific fictional person with a name and one concrete detail. Make them real. "Ray" or "Marcus" or whoever — give them one specific moment that anchors the whole song.
+FEEDBACK:
+${grade}
 
-5. ADD THE MISSING SENSORY DETAIL
-Whatever CRAFT OPPORTUNITIES said was missing — add it. A specific sound, smell, texture. Not generic — specific to this world.
-
-6. FIX THE ESCALATION
-If a pre-chorus or section was flagged for repeating instead of escalating — rewrite it to escalate. The second pre-chorus must be meaningfully different from the first.
-
-7. KEEP THE STRONGEST LINES
-Do not touch lines listed as strongest.
-
-8. EVERY LINE MUST BE IRREPLACEABLE
-If a line could appear in a different song — rewrite it until it couldn't. No stock clichés, no emotion naming, no identity stacking.
-
-9. THIS IS A FICTIONAL CONCEPT SONG — YOU ARE AUTHORIZED TO INVENT
-If this is a concept or fictional scenario (not a personal true story), you are fully authorized to invent specific fictional characters, names, locations, job titles, dialogue, and concrete moments. Do not ask permission. A named fictional character with a specific situation is always better than describing a category of people. Invent freely.
-
-FORMAT: Keep all section labels exactly — [Verse 1], [Pre-Chorus], [Chorus], etc.
-Output the complete rewritten song only. No commentary. No explanations.`;
+RULES:
+- Apply every PATH TO 10 fix — non-negotiable
+- Apply every WEAKEST LINE rewrite
+- Keep every STRONGEST LINE untouched
+- If CHORUS VERDICT suggested a new chorus — use it
+- Add the missing SENSORY DETAIL
+- Fix the ESCALATION — pre-chorus 2 must escalate beyond pre-chorus 1
+- Every line irreplaceable — specific only to this song
+- No stock clichés, no emotion naming
+- Keep all section labels exactly
+- Output the COMPLETE rewritten song. Every section. Do not truncate.`;
 }
 
 function parseScore(gradeText){
   const match=gradeText.match(/SCORE:\s*(\d+(?:\.\d+)?)\s*\/\s*10/i);
   return match?parseFloat(match[1]):null;
 }
-
 function scoreColor(s){return s>=9?'#34d399':s>=7?'#fbbf24':'#f87171';}
-function scoreLabel(s){return s>=9?'🔥 Almost there — one more push':s>=8?'✦ Strong — keep going':s>=7?'Getting there — push further':'Needs real work';}
+function scoreLabel(s){return s>=9?'🔥 Almost there':s>=8?'✦ Strong — keep pushing':s>=7?'Getting there — push further':'Needs real work';}
 
 function renderGrade(gradeText,score,iteration,prevScore){
   const pct=score?(score/10*100):0;
@@ -302,12 +391,42 @@ function renderGrade(gradeText,score,iteration,prevScore){
   </div>`;
 }
 
-function renderActionButtons(){
-  return `<div class="action-row">
-    <button class="rewrite-btn" id="rewrite-btn" onclick="doRewrite()">✦ Rewrite Toward 10</button>
-    <button class="regrade-btn" id="regrade-btn" onclick="doRegrade()">↻ Regrade Current</button>
+function renderOptions(questionsData){
+  const needsOptions=state.lastScore!==null&&state.lastScore<8;
+  let html=`<div class="options-box" id="options-box">`;
+  if(needsOptions){
+    html+=`<div class="options-title">✦ Unlock the Next Level</div>
+    <div class="options-subtitle">The song is stuck at ${state.lastScore}/10. Pick one option for each question — these specific details will push it past the ceiling.</div>`;
+    questionsData.forEach((q,qi)=>{
+      html+=`<div class="options-question">
+        <div class="options-question-label">${q.question}</div>`;
+      q.options.forEach((opt,oi)=>{
+        html+=`<button class="option-btn" data-qid="${q.id}" data-idx="${oi}" onclick="selectOption('${q.id}',${oi},this)">${escapeHTML(opt)}</button>`;
+      });
+      html+=`</div>`;
+    });
+    html+=`<button class="build-btn" id="build-btn" onclick="rewriteWithOptions()" disabled>✦ &nbsp; Rewrite With These Details</button>`;
+  }
+  html+=`</div>`;
+  html+=`<div class="action-row" style="margin-top:14px">
+    <button class="rewrite-btn" id="rewrite-btn" onclick="doSimpleRewrite()">✦ Quick Rewrite</button>
+    <button class="regrade-btn" id="regrade-btn" onclick="doRegrade()">↻ Regrade</button>
   </div>
   <div id="action-output"></div>`;
+  return html;
+}
+
+function selectOption(qid,idx,btn){
+  document.querySelectorAll(`[data-qid="${qid}"]`).forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const optText=btn.textContent;
+  state.selectedOptions[qid]=optText;
+  const allQuestions=document.querySelectorAll('.options-question');
+  const answered=Object.keys(state.selectedOptions).length;
+  if(answered>=allQuestions.length){
+    const buildBtn=document.getElementById('build-btn');
+    if(buildBtn)buildBtn.disabled=false;
+  }
 }
 
 async function grade(){
@@ -318,7 +437,7 @@ async function grade(){
   if(!lyrics){setStatus('⚠ Paste some lyrics first',true);return;}
   document.getElementById('grade-btn').disabled=true;
   document.getElementById('output').innerHTML='';
-  state={lyrics,grade:'',genre,context,rewritten:'',iteration:0,lastScore:null};
+  state={lyrics,grade:'',genre,context,rewritten:'',iteration:0,lastScore:null,selectedOptions:{}};
   setStatus('✦ Grading your lyrics...');
   try{
     const gradeText=await aiCall(buildGradePrompt(lyrics,genre,context,0),0.7,1200);
@@ -326,14 +445,74 @@ async function grade(){
     state.grade=gradeText;
     state.lastScore=score;
     clearStatus();
-    document.getElementById('output').innerHTML=renderGrade(gradeText,score,0,null)+renderActionButtons();
+
+    let optionsHtml='';
+    if(score!==null&&score<8){
+      setStatus('✦ Generating targeted options...');
+      try{
+        const optionsRaw=await aiCall(buildOptionsPrompt(lyrics,gradeText,genre),0.8,800);
+        const cleaned=optionsRaw.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(cleaned);
+        optionsHtml=renderOptions(parsed.questions);
+      }catch(e){
+        optionsHtml=renderOptions([]);
+      }
+      clearStatus();
+    }else{
+      optionsHtml=renderOptions([]);
+    }
+
+    document.getElementById('output').innerHTML=renderGrade(gradeText,score,0,null)+optionsHtml;
     document.getElementById(`copy-grade-0`).addEventListener('click',function(){copyText(gradeText,this);});
     document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){setStatus('⚠ '+e.message,true);}
   document.getElementById('grade-btn').disabled=false;
 }
 
-async function doRewrite(){
+async function rewriteWithOptions(){
+  const buildBtn=document.getElementById('build-btn');
+  if(buildBtn)buildBtn.disabled=true;
+  const out=document.getElementById('action-output');
+  out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Rewriting with your details...</div>`;
+  try{
+    const currentLyrics=state.rewritten||state.lyrics;
+    const rewritten=await aiCall(buildRewriteWithOptionsPrompt(currentLyrics,state.grade,state.genre,state.selectedOptions),0.95,2000);
+    state.rewritten=rewritten;
+    out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Grading the rewrite...</div>`;
+    const newGrade=await aiCall(buildGradePrompt(rewritten,state.genre,state.context,state.iteration+1),0.7,1200);
+    const newScore=parseScore(newGrade);
+    const prevScore=state.lastScore;
+    state.iteration++;
+    state.grade=newGrade;
+    state.lastScore=newScore;
+    state.selectedOptions={};
+
+    let optionsHtml='';
+    if(newScore!==null&&newScore<8){
+      try{
+        const optionsRaw=await aiCall(buildOptionsPrompt(rewritten,newGrade,state.genre),0.8,800);
+        const cleaned=optionsRaw.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(cleaned);
+        optionsHtml=renderOptions(parsed.questions);
+      }catch(e){optionsHtml=renderOptions([]);}
+    }else{
+      optionsHtml=renderOptions([]);
+    }
+
+    out.innerHTML=
+      `<div class="output-box rewrite-box">
+        <div class="box-header"><div class="box-title">✦ Rewrite — Pass ${state.iteration}</div><button class="copy-btn" id="copy-rw-${state.iteration}">Copy</button></div>
+        <div class="lyrics-text">${escapeHTML(rewritten)}</div>
+      </div>`+
+      renderGrade(newGrade,newScore,state.iteration,prevScore)+
+      optionsHtml;
+
+    document.getElementById(`copy-rw-${state.iteration}`).addEventListener('click',function(){copyText(rewritten,this);});
+    out.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){out.innerHTML=`<div class="status visible error" style="margin-top:16px">⚠ ${e.message}</div>`;}
+}
+
+async function doSimpleRewrite(){
   const rwBtn=document.getElementById('rewrite-btn');
   const rgBtn=document.getElementById('regrade-btn');
   if(rwBtn)rwBtn.disabled=true;
@@ -342,9 +521,8 @@ async function doRewrite(){
   out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Rewriting toward 10...</div>`;
   try{
     const currentLyrics=state.rewritten||state.lyrics;
-    const rewritten=await aiCall(buildRewritePrompt(currentLyrics,state.grade,state.genre,state.iteration),0.95,1400);
+    const rewritten=await aiCall(buildSimpleRewritePrompt(currentLyrics,state.grade,state.genre),0.95,2000);
     state.rewritten=rewritten;
-
     out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Grading the rewrite...</div>`;
     const newGrade=await aiCall(buildGradePrompt(rewritten,state.genre,state.context,state.iteration+1),0.7,1200);
     const newScore=parseScore(newGrade);
@@ -352,6 +530,19 @@ async function doRewrite(){
     state.iteration++;
     state.grade=newGrade;
     state.lastScore=newScore;
+    state.selectedOptions={};
+
+    let optionsHtml='';
+    if(newScore!==null&&newScore<8){
+      try{
+        const optionsRaw=await aiCall(buildOptionsPrompt(rewritten,newGrade,state.genre),0.8,800);
+        const cleaned=optionsRaw.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(cleaned);
+        optionsHtml=renderOptions(parsed.questions);
+      }catch(e){optionsHtml=renderOptions([]);}
+    }else{
+      optionsHtml=renderOptions([]);
+    }
 
     out.innerHTML=
       `<div class="output-box rewrite-box">
@@ -359,13 +550,9 @@ async function doRewrite(){
         <div class="lyrics-text">${escapeHTML(rewritten)}</div>
       </div>`+
       renderGrade(newGrade,newScore,state.iteration,prevScore)+
-      renderActionButtons();
+      optionsHtml;
 
     document.getElementById(`copy-rw-${state.iteration}`).addEventListener('click',function(){copyText(rewritten,this);});
-    const newRw=document.getElementById('rewrite-btn');
-    const newRg=document.getElementById('regrade-btn');
-    if(newRw)newRw.onclick=doRewrite;
-    if(newRg)newRg.onclick=doRegrade;
     out.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){out.innerHTML=`<div class="status visible error" style="margin-top:16px">⚠ ${e.message}</div>`;}
 }
@@ -376,7 +563,7 @@ async function doRegrade(){
   if(rwBtn)rwBtn.disabled=true;
   if(rgBtn)rgBtn.disabled=true;
   const out=document.getElementById('action-output');
-  out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Regrading current version...</div>`;
+  out.innerHTML=`<div class="status visible pulsing" style="margin-top:16px">✦ Regrading...</div>`;
   try{
     const currentLyrics=state.rewritten||state.lyrics;
     const newGrade=await aiCall(buildGradePrompt(currentLyrics,state.genre,state.context,state.iteration),0.7,1200);
@@ -384,12 +571,21 @@ async function doRegrade(){
     const prevScore=state.lastScore;
     state.grade=newGrade;
     state.lastScore=newScore;
+    state.selectedOptions={};
 
-    out.innerHTML=renderGrade(newGrade,newScore,state.iteration,prevScore)+renderActionButtons();
-    const newRw=document.getElementById('rewrite-btn');
-    const newRg=document.getElementById('regrade-btn');
-    if(newRw)newRw.onclick=doRewrite;
-    if(newRg)newRg.onclick=doRegrade;
+    let optionsHtml='';
+    if(newScore!==null&&newScore<8){
+      try{
+        const optionsRaw=await aiCall(buildOptionsPrompt(currentLyrics,newGrade,state.genre),0.8,800);
+        const cleaned=optionsRaw.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(cleaned);
+        optionsHtml=renderOptions(parsed.questions);
+      }catch(e){optionsHtml=renderOptions([]);}
+    }else{
+      optionsHtml=renderOptions([]);
+    }
+
+    out.innerHTML=renderGrade(newGrade,newScore,state.iteration,prevScore)+optionsHtml;
     out.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){out.innerHTML=`<div class="status visible error" style="margin-top:16px">⚠ ${e.message}</div>`;}
 }
