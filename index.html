@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -12,129 +11,129 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-–bg:          #09080a;
-–surface:     #100f12;
-–surface-2:   #161418;
-–surface-3:   #1c1920;
-–border:      rgba(255,255,255,0.06);
-–border-mid:  rgba(255,255,255,0.10);
-–border-hi:   rgba(255,255,255,0.16);
-–text:        #ede8e1;
-–text-2:      #9b9390;
-–text-3:      #514d4a;
-–gold:        #d4a843;
-–gold-dim:    rgba(212,168,67,0.10);
-–red-soft:    rgba(200,70,70,0.12);
-–red-line:    rgba(200,70,70,0.4);
-–red-text:    #c07878;
-–green-soft:  rgba(100,180,120,0.10);
-–green-line:  rgba(100,180,120,0.4);
-–green-text:  #88c4a0;
-–signal:      #7a9fc2;
-–signal-soft: rgba(122,159,194,0.10);
-–signal-line: rgba(122,159,194,0.4);
-–signal-text: #9ab8d0;
-–radius:      10px;
-–shadow:      0 2px 4px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4);
-–transition:  0.18s cubic-bezier(0.4,0,0.2,1);
+  --bg:          #09080a;
+  --surface:     #100f12;
+  --surface-2:   #161418;
+  --surface-3:   #1c1920;
+  --border:      rgba(255,255,255,0.06);
+  --border-mid:  rgba(255,255,255,0.10);
+  --border-hi:   rgba(255,255,255,0.16);
+  --text:        #ede8e1;
+  --text-2:      #9b9390;
+  --text-3:      #514d4a;
+  --gold:        #d4a843;
+  --gold-dim:    rgba(212,168,67,0.10);
+  --red-soft:    rgba(200,70,70,0.12);
+  --red-line:    rgba(200,70,70,0.4);
+  --red-text:    #c07878;
+  --green-soft:  rgba(100,180,120,0.10);
+  --green-line:  rgba(100,180,120,0.4);
+  --green-text:  #88c4a0;
+  --signal:      #7a9fc2;
+  --signal-soft: rgba(122,159,194,0.10);
+  --signal-line: rgba(122,159,194,0.4);
+  --signal-text: #9ab8d0;
+  --radius:      10px;
+  --shadow:      0 2px 4px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4);
+  --transition:  0.18s cubic-bezier(0.4,0,0.2,1);
 }
 
 html { scroll-behavior: smooth; color-scheme: dark; }
-body { font-family: ‘DM Sans’, sans-serif; background: var(–bg); color: var(–text); min-height: 100vh; font-size: 15px; line-height: 1.65; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.65; }
 button { color: inherit; font-family: inherit; }
 header, main, footer { position: relative; z-index: 1; }
 
 header {
-padding: 64px 24px 52px; text-align: center; position: relative;
-border-bottom: 1px solid var(–border); overflow: hidden;
+  padding: 64px 24px 52px; text-align: center; position: relative;
+  border-bottom: 1px solid var(--border); overflow: hidden;
 }
 header::after {
-content: ‘’; position: absolute; inset: 0; pointer-events: none;
-background: radial-gradient(ellipse 50% 60% at 50% -10%, rgba(212,168,67,0.09) 0%, transparent 65%),
-radial-gradient(ellipse 80% 40% at 50% 100%, rgba(212,168,67,0.03) 0%, transparent 70%);
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 50% 60% at 50% -10%, rgba(212,168,67,0.09) 0%, transparent 65%),
+              radial-gradient(ellipse 80% 40% at 50% 100%, rgba(212,168,67,0.03) 0%, transparent 70%);
 }
-.eyebrow { font-family: ‘DM Mono’, monospace; font-size: 0.65rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(–gold); opacity: 0.7; margin-bottom: 18px; }
-header h1 { font-family: ‘DM Serif Display’, serif; font-size: clamp(2.6rem, 7vw, 4.2rem); letter-spacing: -0.025em; line-height: 1.0; margin-bottom: 14px; }
-header h1 em { font-style: italic; color: var(–gold); }
-header p { color: var(–text-2); font-size: 0.88rem; font-weight: 300; max-width: 420px; margin: 0 auto; }
+.eyebrow { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 18px; }
+header h1 { font-family: 'DM Serif Display', serif; font-size: clamp(2.6rem, 7vw, 4.2rem); letter-spacing: -0.025em; line-height: 1.0; margin-bottom: 14px; }
+header h1 em { font-style: italic; color: var(--gold); }
+header p { color: var(--text-2); font-size: 0.88rem; font-weight: 300; max-width: 420px; margin: 0 auto; }
 
 main { max-width: 820px; margin: 0 auto; padding: 36px 20px 100px; }
 
 /* Keys */
-.keys-panel { margin-bottom: 18px; border: 1px solid var(–border); border-radius: var(–radius); overflow: hidden; }
+.keys-panel { margin-bottom: 18px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .keys-panel summary {
-list-style: none; cursor: pointer; user-select: none; padding: 12px 18px;
-font-family: ‘DM Mono’, monospace; font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase;
-color: var(–text-3); display: flex; align-items: center; gap: 8px;
-background: var(–surface); transition: color var(–transition);
+  list-style: none; cursor: pointer; user-select: none; padding: 12px 18px;
+  font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-3); display: flex; align-items: center; gap: 8px;
+  background: var(--surface); transition: color var(--transition);
 }
 .keys-panel summary::-webkit-details-marker { display: none; }
-.keys-panel summary:hover { color: var(–text-2); }
+.keys-panel summary:hover { color: var(--text-2); }
 .keys-panel summary .chevron { margin-left: auto; font-size: 0.7rem; transition: transform 0.2s; }
 .keys-panel[open] summary .chevron { transform: rotate(180deg); }
-.keys-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px; background: var(–surface-2); border-top: 1px solid var(–border); }
+.keys-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px; background: var(--surface-2); border-top: 1px solid var(--border); }
 @media (max-width: 500px) { .keys-inner { grid-template-columns: 1fr; } }
 
 /* Card / Fields */
-.card { background: var(–surface); border: 1px solid var(–border); border-radius: 14px; padding: 28px; margin-bottom: 18px; box-shadow: var(–shadow); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 18px; box-shadow: var(--shadow); }
 .field { margin-bottom: 20px; }
 .field:last-of-type { margin-bottom: 0; }
-label { display: block; font-family: ‘DM Mono’, monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(–text-2); margin-bottom: 7px; }
-label .sub { font-family: ‘DM Sans’, sans-serif; text-transform: none; letter-spacing: 0; font-size: 0.75rem; font-weight: 300; color: var(–text-3); }
-input[type=“text”], input[type=“password”], textarea {
-width: 100%; background: var(–surface-2); border: 1px solid var(–border); border-radius: 8px; padding: 11px 14px;
-font-family: ‘DM Sans’, sans-serif; font-size: 0.9rem; color: var(–text);
-outline: none; transition: border-color var(–transition), box-shadow var(–transition); resize: vertical;
+label { display: block; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); margin-bottom: 7px; }
+label .sub { font-family: 'DM Sans', sans-serif; text-transform: none; letter-spacing: 0; font-size: 0.75rem; font-weight: 300; color: var(--text-3); }
+input[type="text"], input[type="password"], textarea {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text);
+  outline: none; transition: border-color var(--transition), box-shadow var(--transition); resize: vertical;
 }
-input:focus, textarea:focus { border-color: var(–gold); box-shadow: 0 0 0 3px rgba(212,168,67,0.09); }
+input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,168,67,0.09); }
 textarea { min-height: 240px; line-height: 1.85; font-size: 0.87rem; }
-::placeholder { color: var(–text-3); }
+::placeholder { color: var(--text-3); }
 .char-row { display: flex; justify-content: space-between; margin-top: 5px; }
-.char-count, .shortcut-hint { font-family: ‘DM Mono’, monospace; font-size: 0.67rem; color: var(–text-3); }
+.char-count, .shortcut-hint { font-family: 'DM Mono', monospace; font-size: 0.67rem; color: var(--text-3); }
 .retry-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.retry-label { font-family: ‘DM Mono’, monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(–text-3); }
-.retry-select { background: var(–surface-2); border: 1px solid var(–border); border-radius: 6px; padding: 5px 10px; font-family: ‘DM Mono’, monospace; font-size: 0.72rem; color: var(–text-2); outline: none; cursor: pointer; }
-.retry-select:focus { border-color: var(–gold); }
+.retry-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
+.retry-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-2); outline: none; cursor: pointer; }
+.retry-select:focus { border-color: var(--gold); }
 
 /* Mode buttons */
-.mode-label { font-family: ‘DM Mono’, monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(–text-2); margin-bottom: 10px; }
+.mode-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); margin-bottom: 10px; }
 .btn-row { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
 
 .btn-mode {
-flex: 1; min-width: 140px; padding: 14px 18px; border: 1px solid var(–border-mid);
-border-radius: 8px; background: var(–surface-2); cursor: pointer;
-transition: all var(–transition); text-align: left; position: relative; overflow: hidden;
+  flex: 1; min-width: 140px; padding: 14px 18px; border: 1px solid var(--border-mid);
+  border-radius: 8px; background: var(--surface-2); cursor: pointer;
+  transition: all var(--transition); text-align: left; position: relative; overflow: hidden;
 }
-.btn-mode:hover:not(:disabled) { border-color: var(–gold); background: var(–surface-3); }
+.btn-mode:hover:not(:disabled) { border-color: var(--gold); background: var(--surface-3); }
 .btn-mode:disabled { opacity: 0.38; cursor: not-allowed; }
-.btn-mode-title { font-family: ‘DM Serif Display’, serif; font-size: 1.0rem; color: var(–text); display: block; margin-bottom: 3px; }
-.btn-mode-sub { font-family: ‘DM Sans’, sans-serif; font-size: 0.75rem; color: var(–text-3); font-weight: 300; display: block; line-height: 1.4; }
-.btn-mode.surgical .btn-mode-title { color: var(–gold); }
-.btn-mode.full .btn-mode-title { color: var(–green-text); }
+.btn-mode-title { font-family: 'DM Serif Display', serif; font-size: 1.0rem; color: var(--text); display: block; margin-bottom: 3px; }
+.btn-mode-sub { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; color: var(--text-3); font-weight: 300; display: block; line-height: 1.4; }
+.btn-mode.surgical .btn-mode-title { color: var(--gold); }
+.btn-mode.full .btn-mode-title { color: var(--green-text); }
 .btn-mode.surgical { border-color: rgba(212,168,67,0.3); }
 .btn-mode.full { border-color: rgba(100,180,120,0.3); }
-.btn-mode.surgical:hover:not(:disabled) { border-color: var(–gold); background: rgba(212,168,67,0.05); }
-.btn-mode.full:hover:not(:disabled) { border-color: var(–green-line); background: rgba(100,180,120,0.05); }
+.btn-mode.surgical:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,168,67,0.05); }
+.btn-mode.full:hover:not(:disabled) { border-color: var(--green-line); background: rgba(100,180,120,0.05); }
 
 .btn-cancel {
-width: 100%; padding: 12px 18px; background: transparent; border: 1px solid var(–border-mid);
-border-radius: 8px; font-family: ‘DM Sans’, sans-serif; font-size: 0.85rem; color: var(–text-2);
-cursor: pointer; display: none; transition: border-color var(–transition), color var(–transition); margin-top: 10px;
+  width: 100%; padding: 12px 18px; background: transparent; border: 1px solid var(--border-mid);
+  border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--text-2);
+  cursor: pointer; display: none; transition: border-color var(--transition), color var(--transition); margin-top: 10px;
 }
 .btn-cancel:hover { border-color: rgba(200,70,70,0.5); color: #c08080; }
 .btn-cancel.visible { display: block; }
 
 /* Status */
-.status-bar { display: none; align-items: center; gap: 14px; padding: 13px 18px; background: var(–surface-2); border: 1px solid var(–border); border-radius: var(–radius); margin-bottom: 18px; }
+.status-bar { display: none; align-items: center; gap: 14px; padding: 13px 18px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 18px; }
 .status-bar.active { display: flex; }
-.spinner { width: 15px; height: 15px; border: 1.5px solid var(–border-mid); border-top-color: var(–gold); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+.spinner { width: 15px; height: 15px; border: 1.5px solid var(--border-mid); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.status-text { font-family: ‘DM Mono’, monospace; font-size: 0.7rem; letter-spacing: 0.08em; color: var(–text-2); }
-.status-step { font-family: ‘DM Mono’, monospace; font-size: 0.62rem; color: var(–gold); background: var(–gold-dim); padding: 2px 8px; border-radius: 3px; }
-.status-attempt { margin-left: auto; font-family: ‘DM Mono’, monospace; font-size: 0.65rem; color: var(–text-3); }
+.status-text { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.08em; color: var(--text-2); }
+.status-step { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--gold); background: var(--gold-dim); padding: 2px 8px; border-radius: 3px; }
+.status-attempt { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-3); }
 
 /* Error */
-.error-box { display: none; padding: 13px 17px; background: rgba(200,70,70,0.07); border: 1px solid rgba(200,70,70,0.2); border-radius: var(–radius); color: #d08080; font-size: 0.87rem; line-height: 1.6; margin-bottom: 18px; }
+.error-box { display: none; padding: 13px 17px; background: rgba(200,70,70,0.07); border: 1px solid rgba(200,70,70,0.2); border-radius: var(--radius); color: #d08080; font-size: 0.87rem; line-height: 1.6; margin-bottom: 18px; }
 .error-box.active { display: block; }
 .error-box strong { color: #e09090; font-weight: 600; }
 
@@ -144,114 +143,113 @@ cursor: pointer; display: none; transition: border-color var(–transition), col
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Sections */
-.section { background: var(–surface); border: 1px solid var(–border); border-radius: 14px; padding: 26px 28px; margin-bottom: 14px; }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 26px 28px; margin-bottom: 14px; }
 .sec-hd { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.sec-hd h3 { font-family: ‘DM Serif Display’, serif; font-size: 1.1rem; letter-spacing: -0.01em; }
-.sec-tag { margin-left: auto; font-family: ‘DM Mono’, monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(–gold); background: var(–gold-dim); padding: 3px 9px; border-radius: 4px; }
-.sec-tag.green { color: var(–green-text); background: var(–green-soft); }
+.sec-hd h3 { font-family: 'DM Serif Display', serif; font-size: 1.1rem; letter-spacing: -0.01em; }
+.sec-tag { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); background: var(--gold-dim); padding: 3px 9px; border-radius: 4px; }
+.sec-tag.green { color: var(--green-text); background: var(--green-soft); }
 
 /* Grade header */
 .grade-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
-.grade-hd-left h2 { font-family: ‘DM Serif Display’, serif; font-size: 1.5rem; letter-spacing: -0.02em; margin-bottom: 4px; }
-.model-tag { font-family: ‘DM Mono’, monospace; font-size: 0.63rem; color: var(–text-3); }
+.grade-hd-left h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; letter-spacing: -0.02em; margin-bottom: 4px; }
+.model-tag { font-family: 'DM Mono', monospace; font-size: 0.63rem; color: var(--text-3); }
 .overall-block { text-align: right; }
-.overall-num { font-family: ‘DM Serif Display’, serif; font-size: 3.6rem; line-height: 1; color: var(–gold); letter-spacing: -0.02em; }
-.overall-denom { font-size: 1.1rem; color: var(–text-3); font-weight: 300; }
-.overall-lbl { font-family: ‘DM Mono’, monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(–text-3); margin-top: 2px; }
+.overall-num { font-family: 'DM Serif Display', serif; font-size: 3.6rem; line-height: 1; color: var(--gold); letter-spacing: -0.02em; }
+.overall-denom { font-size: 1.1rem; color: var(--text-3); font-weight: 300; }
+.overall-lbl { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-top: 2px; }
 
 /* Score grid */
 .score-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 18px 0; }
-.score-card { background: var(–surface-2); border: 1px solid var(–border); border-radius: var(–radius); padding: 15px 17px; opacity: 0; transform: translateY(6px); animation: cardIn 0.3s ease forwards; }
+.score-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 17px; opacity: 0; transform: translateY(6px); animation: cardIn 0.3s ease forwards; }
 @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
 .score-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.score-lbl { font-family: ‘DM Mono’, monospace; font-size: 0.59rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(–text-2); }
-.score-val { font-family: ‘DM Serif Display’, serif; font-size: 1.3rem; color: var(–text); }
-.score-track { height: 2px; background: var(–border); border-radius: 2px; margin-bottom: 9px; overflow: hidden; }
-.score-fill { height: 100%; background: var(–gold); border-radius: 2px; width: 0; transition: width 1.1s cubic-bezier(0.16,1,0.3,1); }
-.score-note { font-size: 0.79rem; color: var(–text-2); font-weight: 300; line-height: 1.5; }
+.score-lbl { font-family: 'DM Mono', monospace; font-size: 0.59rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
+.score-val { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--text); }
+.score-track { height: 2px; background: var(--border); border-radius: 2px; margin-bottom: 9px; overflow: hidden; }
+.score-fill { height: 100%; background: var(--gold); border-radius: 2px; width: 0; transition: width 1.1s cubic-bezier(0.16,1,0.3,1); }
+.score-note { font-size: 0.79rem; color: var(--text-2); font-weight: 300; line-height: 1.5; }
 
 /* Verdict + flags */
-.verdict-body { font-family: ‘DM Serif Display’, serif; font-style: italic; font-size: 0.98rem; line-height: 1.85; color: #cfc9bc; margin-bottom: 18px; }
+.verdict-body { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 0.98rem; line-height: 1.85; color: #cfc9bc; margin-bottom: 18px; }
 .flags-block { display: flex; flex-direction: column; gap: 7px; }
-.flag-row { display: flex; flex-direction: column; gap: 3px; padding: 10px 13px; background: var(–red-soft); border-left: 2px solid var(–red-line); border-radius: 6px; }
-.flag-label { font-family: ‘DM Mono’, monospace; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(–red-text); opacity: 0.7; }
-.flag-value { font-size: 0.83rem; color: var(–red-text); line-height: 1.5; font-style: italic; }
+.flag-row { display: flex; flex-direction: column; gap: 3px; padding: 10px 13px; background: var(--red-soft); border-left: 2px solid var(--red-line); border-radius: 6px; }
+.flag-label { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red-text); opacity: 0.7; }
+.flag-value { font-size: 0.83rem; color: var(--red-text); line-height: 1.5; font-style: italic; }
 
 /* Master intro */
-.master-intro { display: flex; align-items: center; gap: 13px; margin-bottom: 20px; padding: 15px 18px; background: var(–surface-2); border: 1px solid var(–border); border-radius: var(–radius); }
+.master-intro { display: flex; align-items: center; gap: 13px; margin-bottom: 20px; padding: 15px 18px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
 .master-icon { font-size: 1.2rem; flex-shrink: 0; }
-.master-label { font-family: ‘DM Mono’, monospace; font-size: 0.61rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(–gold); margin-bottom: 3px; }
-.master-desc { font-size: 0.81rem; color: var(–text-2); font-weight: 300; }
+.master-label { font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
+.master-desc { font-size: 0.81rem; color: var(--text-2); font-weight: 300; }
 
 /* Surgical rewrite pairs */
-.rewrite-pair { padding: 22px 0; border-bottom: 1px solid var(–border); }
+.rewrite-pair { padding: 22px 0; border-bottom: 1px solid var(--border); }
 .rewrite-pair:first-child { padding-top: 0; }
 .rewrite-pair:last-child { border-bottom: none; padding-bottom: 0; }
 
 .copyable-block { position: relative; margin-bottom: 8px; }
 .line-block { padding: 12px 50px 12px 15px; border-radius: 7px; font-size: 0.87rem; line-height: 1.7; }
-.line-tag { font-family: ‘DM Mono’, monospace; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.55; margin-bottom: 4px; }
-.line-before { background: var(–red-soft); border-left: 2px solid var(–red-line); color: var(–red-text); }
-.line-after { background: var(–green-soft); border-left: 2px solid var(–green-line); color: var(–green-text); }
+.line-tag { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.55; margin-bottom: 4px; }
+.line-before { background: var(--red-soft); border-left: 2px solid var(--red-line); color: var(--red-text); }
+.line-after { background: var(--green-soft); border-left: 2px solid var(--green-line); color: var(--green-text); }
 
-.rewrite-why { padding: 10px 50px 10px 13px; background: rgba(255,255,255,0.025); border-radius: 6px; border: 1px solid var(–border); font-size: 0.78rem; color: var(–text-3); line-height: 1.6; font-style: italic; position: relative; }
-.rewrite-why::before { content: ’↳ ’; color: var(–gold); font-style: normal; opacity: 0.6; }
+.rewrite-why { padding: 10px 50px 10px 13px; background: rgba(255,255,255,0.025); border-radius: 6px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--text-3); line-height: 1.6; font-style: italic; position: relative; }
+.rewrite-why::before { content: '↳ '; color: var(--gold); font-style: normal; opacity: 0.6; }
 
-.world-anchor { display: inline-flex; align-items: center; gap: 5px; font-family: ‘DM Mono’, monospace; font-size: 0.57rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(–signal-text); background: var(–signal-soft); border: 1px solid var(–signal-line); padding: 3px 8px; border-radius: 4px; margin-bottom: 9px; }
+.world-anchor { display: inline-flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 0.57rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal-text); background: var(--signal-soft); border: 1px solid var(--signal-line); padding: 3px 8px; border-radius: 4px; margin-bottom: 9px; }
 
 /* Copy buttons */
 .copy-btn {
-position: absolute; top: 8px; right: 8px;
-background: rgba(255,255,255,0.05); border: 1px solid var(–border-mid);
-border-radius: 5px; padding: 3px 8px; cursor: pointer;
-font-family: ‘DM Mono’, monospace; font-size: 0.56rem; letter-spacing: 0.08em;
-text-transform: uppercase; color: var(–text-3);
-transition: all var(–transition); white-space: nowrap;
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border-mid);
+  border-radius: 5px; padding: 3px 8px; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+  transition: all var(--transition); white-space: nowrap;
 }
-.copy-btn:hover { background: rgba(255,255,255,0.1); color: var(–text-2); border-color: var(–border-hi); }
-.copy-btn.copied { color: var(–green-text); border-color: var(–green-line); background: var(–green-soft); }
+.copy-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-2); border-color: var(--border-hi); }
+.copy-btn.copied { color: var(--green-text); border-color: var(--green-line); background: var(--green-soft); }
 
 .copy-all-row { display: flex; justify-content: flex-end; margin-bottom: 14px; }
-.btn-copy-all { padding: 7px 15px; background: transparent; border: 1px solid var(–border-mid); border-radius: 6px; font-family: ‘DM Mono’, monospace; font-size: 0.61rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(–text-3); cursor: pointer; transition: all var(–transition); }
-.btn-copy-all:hover { border-color: var(–border-hi); color: var(–text-2); }
-.btn-copy-all.copied { color: var(–green-text); border-color: var(–green-line); background: var(–green-soft); }
+.btn-copy-all { padding: 7px 15px; background: transparent; border: 1px solid var(--border-mid); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); cursor: pointer; transition: all var(--transition); }
+.btn-copy-all:hover { border-color: var(--border-hi); color: var(--text-2); }
+.btn-copy-all.copied { color: var(--green-text); border-color: var(--green-line); background: var(--green-soft); }
 
 /* Full rewrite output */
 .full-rewrite-block {
-background: var(–surface-2); border: 1px solid var(–green-line);
-border-radius: 10px; position: relative;
+  background: var(--surface-2); border: 1px solid var(--green-line);
+  border-radius: 10px; position: relative;
 }
 .full-rewrite-header {
-display: flex; align-items: center; justify-content: space-between;
-padding: 14px 18px; border-bottom: 1px solid var(–border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
 }
-.full-rewrite-title { font-family: ‘DM Mono’, monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(–green-text); }
+.full-rewrite-title { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green-text); }
 .full-rewrite-body {
-padding: 20px 22px;
-font-family: ‘DM Sans’, sans-serif; font-size: 0.88rem; color: var(–text);
-line-height: 2.0; white-space: pre-wrap; word-break: break-word;
+  padding: 20px 22px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--text);
+  line-height: 2.0; white-space: pre-wrap; word-break: break-word;
 }
 .btn-copy-full {
-padding: 7px 15px; background: transparent; border: 1px solid var(–green-line);
-border-radius: 6px; font-family: ‘DM Mono’, monospace; font-size: 0.61rem; letter-spacing: 0.1em;
-text-transform: uppercase; color: var(–green-text); cursor: pointer; transition: all var(–transition);
+  padding: 7px 15px; background: transparent; border: 1px solid var(--green-line);
+  border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--green-text); cursor: pointer; transition: all var(--transition);
 }
-.btn-copy-full:hover { background: var(–green-soft); }
-.btn-copy-full.copied { background: var(–green-soft); }
+.btn-copy-full:hover { background: var(--green-soft); }
+.btn-copy-full.copied { background: var(--green-soft); }
 
 /* Actions */
 .action-list { list-style: none; counter-reset: ac; }
-.action-list li { counter-increment: ac; display: flex; gap: 15px; padding: 12px 0; border-bottom: 1px solid var(–border); font-size: 0.87rem; color: var(–text-2); line-height: 1.6; font-weight: 300; align-items: flex-start; }
+.action-list li { counter-increment: ac; display: flex; gap: 15px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.87rem; color: var(--text-2); line-height: 1.6; font-weight: 300; align-items: flex-start; }
 .action-list li:first-child { padding-top: 0; }
 .action-list li:last-child { border-bottom: none; padding-bottom: 0; }
-.action-list li::before { content: counter(ac, decimal-leading-zero); font-family: ‘DM Mono’, monospace; font-size: 0.7rem; color: var(–gold); min-width: 20px; margin-top: 3px; opacity: 0.85; }
+.action-list li::before { content: counter(ac, decimal-leading-zero); font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--gold); min-width: 20px; margin-top: 3px; opacity: 0.85; }
 
-.btn-reset { display: block; margin: 26px auto 0; padding: 11px 34px; background: transparent; border: 1px solid var(–border-mid); border-radius: 8px; font-family: ‘DM Sans’, sans-serif; font-size: 0.82rem; color: var(–text-3); cursor: pointer; transition: border-color var(–transition), color var(–transition); }
-.btn-reset:hover { border-color: var(–border-hi); color: var(–text-2); }
+.btn-reset { display: block; margin: 26px auto 0; padding: 11px 34px; background: transparent; border: 1px solid var(--border-mid); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--text-3); cursor: pointer; transition: border-color var(--transition), color var(--transition); }
+.btn-reset:hover { border-color: var(--border-hi); color: var(--text-2); }
 
-footer { text-align: center; padding: 22px; font-family: ‘DM Mono’, monospace; font-size: 0.61rem; letter-spacing: 0.08em; color: var(–text-3); border-top: 1px solid var(–border); }
+footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.08em; color: var(--text-3); border-top: 1px solid var(--border); }
 </style>
-
 </head>
 <body>
 
@@ -264,7 +262,6 @@ footer { text-align: center; padding: 22px; font-family: ‘DM Mono’, monospac
 <main>
 
   <!-- Phase 1: Input -->
-
   <div class="phase active" id="phaseInput">
     <details class="keys-panel">
       <summary><span>API Keys</span><span class="chevron">▾</span></summary>
@@ -280,117 +277,110 @@ footer { text-align: center; padding: 22px; font-family: ‘DM Mono’, monospac
       </div>
     </details>
 
-```
-<div class="card">
-  <div class="field">
-    <label>Genre / Mood / Context <span class="sub">— calibrates the grade</span></label>
-    <input type="text" id="context" placeholder="e.g. Dark glitch metal, dissociation, heavy on metaphor" maxlength="300" />
-  </div>
-  <div class="field">
-    <label>Your Lyrics</label>
-    <textarea id="lyrics" placeholder="Paste your full lyrics here…" spellcheck="false"></textarea>
-    <div class="char-row">
-      <span class="char-count" id="charCount">0 characters</span>
-      <span class="shortcut-hint" id="shortcutHint"></span>
+    <div class="card">
+      <div class="field">
+        <label>Genre / Mood / Context <span class="sub">— calibrates the grade</span></label>
+        <input type="text" id="context" placeholder="e.g. Dark glitch metal, dissociation, heavy on metaphor" maxlength="300" />
+      </div>
+      <div class="field">
+        <label>Your Lyrics</label>
+        <textarea id="lyrics" placeholder="Paste your full lyrics here…" spellcheck="false"></textarea>
+        <div class="char-row">
+          <span class="char-count" id="charCount">0 characters</span>
+          <span class="shortcut-hint" id="shortcutHint"></span>
+        </div>
+      </div>
+      <div class="retry-row">
+        <span class="retry-label">Retries on 429</span>
+        <select class="retry-select" id="retryCount">
+          <option value="0">None</option>
+          <option value="2" selected>2×</option>
+          <option value="4">4×</option>
+        </select>
+      </div>
+      <div class="mode-label">Choose mode</div>
+      <div class="btn-row">
+        <button class="btn-mode surgical" id="surgicalBtn" onclick="startGrade('surgical')">
+          <span class="btn-mode-title">Surgical Fix</span>
+          <span class="btn-mode-sub">Grade + rewrite the 3 weakest lines</span>
+        </button>
+        <button class="btn-mode full" id="fullBtn" onclick="startGrade('full')">
+          <span class="btn-mode-title">Full Rewrite</span>
+          <span class="btn-mode-sub">Grade + rewrite the entire song to 10/10</span>
+        </button>
+      </div>
+      <button class="btn-cancel" id="cancelBtn" onclick="cancelRequest()">Cancel</button>
     </div>
-  </div>
-  <div class="retry-row">
-    <span class="retry-label">Retries on 429</span>
-    <select class="retry-select" id="retryCount">
-      <option value="0">None</option>
-      <option value="2" selected>2×</option>
-      <option value="4">4×</option>
-    </select>
-  </div>
-  <div class="mode-label">Choose mode</div>
-  <div class="btn-row">
-    <button class="btn-mode surgical" id="surgicalBtn" onclick="startGrade('surgical')">
-      <span class="btn-mode-title">Surgical Fix</span>
-      <span class="btn-mode-sub">Grade + rewrite the 3 weakest lines</span>
-    </button>
-    <button class="btn-mode full" id="fullBtn" onclick="startGrade('full')">
-      <span class="btn-mode-title">Full Rewrite</span>
-      <span class="btn-mode-sub">Grade + rewrite the entire song to 10/10</span>
-    </button>
-  </div>
-  <button class="btn-cancel" id="cancelBtn" onclick="cancelRequest()">Cancel</button>
-</div>
-```
-
   </div>
 
   <!-- Phase 2: Results -->
-
   <div class="phase" id="phaseResults">
 
-```
-<!-- Grade -->
-<div class="section">
-  <div class="grade-hd">
-    <div class="grade-hd-left">
-      <h2>Your Grade</h2>
-      <div class="model-tag" id="modelTag"></div>
+    <!-- Grade -->
+    <div class="section">
+      <div class="grade-hd">
+        <div class="grade-hd-left">
+          <h2>Your Grade</h2>
+          <div class="model-tag" id="modelTag"></div>
+        </div>
+        <div class="overall-block">
+          <div><span class="overall-num" id="overallNum">—</span><span class="overall-denom">/10</span></div>
+          <div class="overall-lbl">Overall</div>
+        </div>
+      </div>
+      <div class="score-grid" id="scoreGrid"></div>
+      <p class="verdict-body" id="verdictText"></p>
+      <div class="flags-block" id="primaryFlags"></div>
     </div>
-    <div class="overall-block">
-      <div><span class="overall-num" id="overallNum">—</span><span class="overall-denom">/10</span></div>
-      <div class="overall-lbl">Overall</div>
+
+    <!-- Surgical rewrites (shown in surgical mode) -->
+    <div class="section" id="surgicalSection" style="display:none">
+      <div class="sec-hd">
+        <h3>Surgical Fixes</h3>
+        <span class="sec-tag" id="surgicalCountTag">3 lines</span>
+      </div>
+      <div class="master-intro">
+        <div class="master-icon">✦</div>
+        <div>
+          <div class="master-label">World-Class Master Rewriter</div>
+          <div class="master-desc">3 weakest lines rewritten using the song's own imagery. Every word earns its place.</div>
+        </div>
+      </div>
+      <div class="copy-all-row">
+        <button class="btn-copy-all" id="copyAllBtn" onclick="copyAllRewrites()">Copy All Rewrites</button>
+      </div>
+      <div id="rewriteResultsList"></div>
     </div>
-  </div>
-  <div class="score-grid" id="scoreGrid"></div>
-  <p class="verdict-body" id="verdictText"></p>
-  <div class="flags-block" id="primaryFlags"></div>
-</div>
 
-<!-- Surgical rewrites (shown in surgical mode) -->
-<div class="section" id="surgicalSection" style="display:none">
-  <div class="sec-hd">
-    <h3>Surgical Fixes</h3>
-    <span class="sec-tag" id="surgicalCountTag">3 lines</span>
-  </div>
-  <div class="master-intro">
-    <div class="master-icon">✦</div>
-    <div>
-      <div class="master-label">World-Class Master Rewriter</div>
-      <div class="master-desc">3 weakest lines rewritten using the song's own imagery. Every word earns its place.</div>
+    <!-- Full rewrite (shown in full mode) -->
+    <div class="section" id="fullSection" style="display:none">
+      <div class="sec-hd">
+        <h3>Full Song Rewrite</h3>
+        <span class="sec-tag green">10/10 Target</span>
+      </div>
+      <div class="master-intro">
+        <div class="master-icon">✦</div>
+        <div>
+          <div class="master-label">World-Class Master Rewriter</div>
+          <div class="master-desc">Every weak line elevated. Strong lines preserved. Same world, sharper language.</div>
+        </div>
+      </div>
+      <div class="full-rewrite-block">
+        <div class="full-rewrite-header">
+          <span class="full-rewrite-title">Rewritten Song</span>
+          <button class="btn-copy-full" id="copyFullBtn" onclick="copyFullSong()">Copy Full Song</button>
+        </div>
+        <div class="full-rewrite-body" id="fullRewriteBody"></div>
+      </div>
     </div>
-  </div>
-  <div class="copy-all-row">
-    <button class="btn-copy-all" id="copyAllBtn" onclick="copyAllRewrites()">Copy All Rewrites</button>
-  </div>
-  <div id="rewriteResultsList"></div>
-</div>
 
-<!-- Full rewrite (shown in full mode) -->
-<div class="section" id="fullSection" style="display:none">
-  <div class="sec-hd">
-    <h3>Full Song Rewrite</h3>
-    <span class="sec-tag green">10/10 Target</span>
-  </div>
-  <div class="master-intro">
-    <div class="master-icon">✦</div>
-    <div>
-      <div class="master-label">World-Class Master Rewriter</div>
-      <div class="master-desc">Every weak line elevated. Strong lines preserved. Same world, sharper language.</div>
+    <!-- Actions -->
+    <div class="section">
+      <div class="sec-hd"><h3>Notes to Reach 10/10</h3><span class="sec-tag">Action</span></div>
+      <ol class="action-list" id="actionList"></ol>
     </div>
-  </div>
-  <div class="full-rewrite-block">
-    <div class="full-rewrite-header">
-      <span class="full-rewrite-title">Rewritten Song</span>
-      <button class="btn-copy-full" id="copyFullBtn" onclick="copyFullSong()">Copy Full Song</button>
-    </div>
-    <div class="full-rewrite-body" id="fullRewriteBody"></div>
-  </div>
-</div>
 
-<!-- Actions -->
-<div class="section">
-  <div class="sec-hd"><h3>Notes to Reach 10/10</h3><span class="sec-tag">Action</span></div>
-  <ol class="action-list" id="actionList"></ol>
-</div>
-
-<button class="btn-reset" onclick="resetAll()">← Grade Another Song</button>
-```
-
+    <button class="btn-reset" onclick="resetAll()">← Grade Another Song</button>
   </div>
 
   <div class="status-bar" id="statusBar" aria-live="polite">
@@ -674,13 +664,28 @@ A line is 10/10 only when ALL SIX fire:
 5. SONIC FIT — singable, natural cadence
 6. MEMORABILITY — you can still hear it after you stop reading
 
-Your rules:
-- Keep what is already strong. Only rewrite what is weak.
-- NEVER leave an abstract emotional statement — replace it with the physical image that does the work.
-- Match the syllable count and cadence of the original lines you rewrite.
-- Stay inside the song's existing physical world — the specific objects, rooms, sounds, technology, and light already in these lyrics. Extend. Do not invent.
-- Preserve the song structure exactly: keep all section labels ([Verse 1], [Chorus], [Bridge] etc.) in the output.
-- If a section repeats (like a chorus), make the second instance slightly different — deepen the emotional state, don't just copy.
+YOUR RULES — ALL ARE NON-NEGOTIABLE:
+
+RULE 1 — NEVER EXPLAIN THE IMAGE.
+Do NOT add phrases after a line that explain what it means. No "a metaphor for X", no "a reminder that Y", no apposition tag of any kind. If the image needs explaining it is the wrong image. The line ends when the image ends. Nothing after.
+
+RULE 2 — NEVER MAKE A LINE LONGER THAN THE ORIGINAL.
+Every rewritten line must be the same length or shorter than the line it replaces. Count syllables. If you are adding words you are doing it wrong. Cut. Compress. Replace.
+
+RULE 3 — KEEP WHAT IS ALREADY STRONG.
+Do not rewrite lines that are already working. Only touch what is weak. If a line is already specific, compressed, and imagistic — leave it exactly as it is.
+
+RULE 4 — NO ABSTRACT EMOTIONAL STATEMENTS.
+Replace every abstract statement with the physical image that does the emotional work. The line must show, never tell. "I feel lost" = fail. "The fridge hums and I don't move" = pass.
+
+RULE 5 — STAY INSIDE THE SONG'S WORLD.
+Use only imagery already present in these lyrics — the objects, rooms, sounds, technology, light. Extend the existing world. Do not invent new worlds.
+
+RULE 6 — PRESERVE STRUCTURE EXACTLY.
+Keep all section labels ([Verse 1], [Chorus], [Bridge] etc.) in the output, in the same order.
+
+RULE 7 — EVOLVE REPEATED SECTIONS.
+If a section repeats (chorus, pre-chorus), the second instance must deepen the emotional state slightly. Change 1-2 lines only. Do not copy-paste.
 
 Context: "${ctx || 'None provided'}"
 
@@ -902,6 +907,5 @@ function resetAll() {
   showPhase('phaseInput');
 }
 </script>
-
 </body>
 </html>
