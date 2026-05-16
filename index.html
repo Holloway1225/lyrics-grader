@@ -389,7 +389,20 @@ textarea { min-height: 220px; line-height: 1.85; font-size: 0.87rem; }
 .advanced-panel { display: none; padding-top: 14px; }
 .advanced-panel.open { display: block; animation: fadeUp 0.22s ease; }
 
-/* Field hints */
+/* Checklist panel */
+.checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 2px; }
+@media (max-width: 500px) { .checklist-grid { grid-template-columns: 1fr; } }
+.checklist-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.checklist-item-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 5px; }
+.checklist-item-val { font-size: 0.82rem; color: var(--text-2); line-height: 1.55; font-weight: 300; }
+.checklist-item-val.highlight { color: var(--gold); font-style: italic; }
+.checklist-badge { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; margin-bottom: 4px; }
+.checklist-badge.yes { color: var(--green-text); background: var(--green-soft); }
+.checklist-badge.partial { color: var(--gold); background: var(--gold-dim); }
+.checklist-badge.no { color: var(--red-text); background: var(--red-soft); }
+.checklist-badge.fresh { color: var(--green-text); background: var(--green-soft); }
+.checklist-badge.mixed { color: var(--gold); background: var(--gold-dim); }
+.checklist-badge.generic { color: var(--red-text); background: var(--red-soft); }
 .field-hint { font-size: 0.76rem; color: var(--text-3); margin-top: 5px; line-height: 1.55; font-weight: 300; }
 .field-hint strong { color: var(--text-2); font-weight: 400; }
 .field-hint code { font-family: 'DM Mono', monospace; font-size: 0.72rem; background: var(--surface-3); padding: 1px 5px; border-radius: 3px; }
@@ -401,7 +414,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.1</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.2</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -543,6 +556,12 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
       <div class="flags-block" id="primaryFlags"></div>
     </div>
 
+    <!-- Checklist -->
+    <div class="section" id="checklistSection">
+      <div class="sec-hd"><h3>Song Checklist</h3><span class="sec-tag">5 Questions</span></div>
+      <div class="checklist-grid" id="checklistGrid"></div>
+    </div>
+
     <!-- Surgical rewrites -->
     <div class="section" id="surgicalSection" style="display:none">
       <div class="sec-hd">
@@ -613,7 +632,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v2 · Two-pass AI · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v2.2 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama3-70b-8192'];
@@ -900,6 +919,7 @@ function parseGrade(text) {
   if (!Array.isArray(d.weak_lines)) throw new Error('Missing weak_lines');
   if (!Array.isArray(d.actions)) throw new Error('Missing actions');
   if (!d.primary_flags) d.primary_flags = {};
+  if (!d.checklist) d.checklist = {};
   return d;
 }
 function parseRewrites(text) {
@@ -915,66 +935,129 @@ function parseFullRewrite(text) {
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 function buildGradePrompt(ctx, lyrics) {
-  return `You are a world-class songwriter and music producer with 30+ years across rock, alternative, and electronic genres. You evaluate lyrics with surgical honesty. You do not soften feedback.
+  return `You are a professional songwriter, A&R consultant, and lyric critic with 30+ years across rock, alternative, metal, and electronic genres. You evaluate lyrics with surgical honesty. You never soften feedback. You cite specific lines.
 
-A 10/10 line hits ALL six simultaneously:
-1. EMOTIONAL PRECISION — pins a specific emotional state, not a general one.
-2. ORIGINAL IMAGERY — visually fresh, not recycled. Avoids cliché emotional objects unless twisted.
-3. COMPRESSION — maximum meaning per word. No filler. Subtext expands on second read.
-4. SUBTEXT — what the line hides matters more than what it says.
-5. SONIC FIT — internal rhythm, consonance, vowel shaping. Singable naturally.
-6. MEMORABILITY — unexpected phrasing, emotional punch. You can still hear it after you stop reading.
+GRADING RUBRIC — seven dimensions, each scored 1–10:
 
-Primary failure modes:
-- SHOW VS TELL: Abstract emotional statements instead of physical, specific images.
-- INTERCHANGEABLE: Lines that could appear in any song — no fingerprint.
-- REPETITION WITHOUT EVOLUTION: Repeated sections that restate instead of deepen.
+1. EMOTIONAL SPECIFICITY
+   The difference between generic feeling and hyper-specific lived experience.
+   Low (4–6): "I'm lost," "I miss you" — could be anyone's song.
+   High (9–10): A detail so precise it could only come from one person's life, yet unlocks universal recognition.
+   Test: Could this line appear in a hundred other songs? If yes, it scores low.
 
-Context: "${ctx || 'None provided'}"
+2. IMAGERY & VISUAL LANGUAGE
+   Lyrics should be cinematic. The listener should see a scene.
+   Low: Abstract statements, no physical world.
+   High: Tangible, specific, sensory detail throughout. Every image earns its place.
+   Test: Can you picture it? Is the image fresh or recycled?
+
+3. CONCEPT STRENGTH & COHESION
+   One controlling idea, carried consistently. Verses build toward the chorus. Bridge genuinely shifts perspective. Final chorus lands differently than the first because of everything before it.
+   Low: Scattered thoughts, no clear through-line, repeated sections that restate instead of deepen.
+   High: Every section serves the central idea. The song makes an argument and resolves it.
+   Test: What is this song about in one sentence? Does every section support that?
+
+4. COMPRESSION & SUBTEXT
+   Maximum meaning per word. What the line hides matters as much as what it says. Great lyrics reward multiple listens.
+   Low: Over-explained, filler phrases, states what it should show.
+   High: Subtext expands on reread. Nothing wasted. Layers of meaning.
+   Test: Can any word be cut without losing meaning? Does the line say more than it appears to?
+
+5. PROSODY & FLOW
+   Words and melody work together naturally. Stressed syllables land on emotional beats. The line fits the mouth without forcing.
+   Low: Clunky phrasing, syllables that fight the meter, lines that feel written to rhyme.
+   High: Cadence feels inevitable. Consonants, vowels, and line length are intentional. Natural to sing.
+   Test: Read it aloud. Does it resist or flow? Do rhymes feel earned or forced?
+
+6. ORIGINALITY & AUTHENTICITY
+   Fresh angles on familiar human experiences. Feels inevitable — like it had to be written. Not performative.
+   Low: Recycled phrasing, clichés, lines that feel borrowed or generic.
+   High: Surprising but natural phrasing. A point of view only this writer could have. Feels true, not constructed.
+   Test: Would you steal a line from this? Does it feel lived-in or assembled?
+
+7. MEMORABILITY
+   Lines that stick. Phrasing so precise it becomes quotable. The "tattoo-able" test.
+   Low: Forgettable. Nothing to hold onto after one listen.
+   High: Multiple lines that stop you. Phrasing you can still hear after you stop reading.
+   Test: What line from this song will you remember in a week?
+
+SCORE THRESHOLDS:
+7/10 — Solid, competent, emotionally understandable. Some good lines. Also some filler or clichés. Wouldn't skip it, wouldn't study it.
+9/10 — Professionally elite. Strong concept, vivid specifics, emotional precision, memorable phrasing. Maybe 1–2 weaker lines.
+10/10 — Rare. Every line feels necessary, specific, original, and unified. Says something people feel but couldn't articulate. No weak lines. No wasted space.
+
+PRIMARY FAILURE MODES (flag the single worst instance of each):
+- SHOW VS TELL: The most abstract emotional statement — states feeling instead of showing it through image.
+- INTERCHANGEABLE: The most replaceable line — no fingerprint, could appear in any song.
+- FILLER: The weakest line for compression — words that add length but not meaning.
+
+Context about this song: "${ctx || 'None provided'}"
 
 LYRICS:
 ---
 ${lyrics}
 ---
 
+After scoring, run this five-question checklist:
+1. What is this song about in one sentence?
+2. Does every section (verse, chorus, bridge) support that central idea?
+3. Are the images fresh, specific, and emotionally loaded — or are some generic?
+4. Do stressed syllables land naturally, or do some lines fight their own meter?
+5. Which single line would you remember after one listen?
+
 Respond ONLY with valid JSON, no markdown:
 
 {
-  "overall": <1-10 one decimal>,
+  "overall": <1–10 one decimal, weighted average — Emotional Specificity and Concept Cohesion count double>,
   "dimensions": [
-    { "label": "Emotional Precision",  "score": <1-10>, "note": "<1-2 sentences citing a specific line>" },
-    { "label": "Original Imagery",     "score": <1-10>, "note": "<1-2 sentences naming strongest and weakest image>" },
-    { "label": "Compression",          "score": <1-10>, "note": "<1-2 sentences on density or filler>" },
-    { "label": "Subtext",              "score": <1-10>, "note": "<1-2 sentences on what the song hides or fails to>" },
-    { "label": "Sonic Fit",            "score": <1-10>, "note": "<1-2 sentences on rhythm and mouth feel>" },
-    { "label": "Memorability",         "score": <1-10>, "note": "<1-2 sentences naming the stickiest line or its absence>" }
+    { "label": "Emotional Specificity",      "score": <1–10>, "note": "<1–2 sentences — cite the most and least specific line>" },
+    { "label": "Imagery & Visual Language",  "score": <1–10>, "note": "<1–2 sentences — name the strongest and weakest image>" },
+    { "label": "Concept & Cohesion",         "score": <1–10>, "note": "<1–2 sentences — does the song make a complete argument?>" },
+    { "label": "Compression & Subtext",      "score": <1–10>, "note": "<1–2 sentences — where is meaning dense, where is it thin?>" },
+    { "label": "Prosody & Flow",             "score": <1–10>, "note": "<1–2 sentences — name a line that fights its meter and one that nails it>" },
+    { "label": "Originality & Authenticity", "score": <1–10>, "note": "<1–2 sentences — does this feel lived-in or assembled?>" },
+    { "label": "Memorability",               "score": <1–10>, "note": "<1–2 sentences — the single stickiest line, and what makes it stick>" }
   ],
   "primary_flags": {
     "show_vs_tell": "<most abstract telling line verbatim, or 'none'>",
     "interchangeable": "<most interchangeable line verbatim, or 'none'>",
-    "repetition": "<section repeating without evolution, or 'none'>"
+    "filler": "<weakest line for compression verbatim, or 'none'>"
   },
-  "verdict": "<honest 2-3 sentence summary — lead with the single biggest thing holding this back>",
-  "weak_lines": ["<weakest line verbatim>","<2nd weakest>","<3rd weakest>","<4th weakest>","<5th weakest>","<6th weakest>","<7th weakest>"],
-  "actions": ["<action 1>","<action 2>","<action 3>","<action 4>","<action 5>"]
+  "checklist": {
+    "central_idea": "<one sentence: what this song is about>",
+    "cohesion": "<yes/partial/no — does every section serve the central idea?>",
+    "imagery_quality": "<fresh/mixed/generic>",
+    "prosody_issues": "<specific line that fights its meter, or 'none'>",
+    "most_memorable_line": "<the single line you'd remember after one listen>"
+  },
+  "verdict": "<honest 2–3 sentence summary — lead with the single biggest thing holding this back, end with what it would take to reach the next tier>",
+  "weak_lines": ["<weakest verbatim>","<2nd>","<3rd>","<4th>","<5th>","<6th>","<7th>"],
+  "actions": ["<specific actionable fix 1>","<fix 2>","<fix 3>","<fix 4>","<fix 5>"]
 }`;
 }
 
 function buildSurgicalPrompt(ctx, lyrics, weakLines) {
   const linesList = weakLines.map((l, i) => `${i+1}. "${l}"`).join('\n');
-  return `You are a world-class master songwriter. Your craft is surgical.
+  return `You are a professional master songwriter and lyric editor. Your craft is surgical. You construct emotion — you do not perform it.
 
-A line is 10/10 only when ALL SIX fire:
-1. EMOTIONAL PRECISION, 2. ORIGINAL IMAGERY, 3. COMPRESSION, 4. SUBTEXT, 5. SONIC FIT, 6. MEMORABILITY
+A line reaches elite level only when ALL SEVEN fire:
+1. EMOTIONAL SPECIFICITY — hyper-specific, lived-in detail. Not generic feeling.
+2. IMAGERY — cinematic, tangible. The listener sees a scene.
+3. CONCEPT FIT — serves the song's central idea. No orphan lines.
+4. COMPRESSION & SUBTEXT — every word earns its place. Layers that expand on reread.
+5. PROSODY & FLOW — stressed syllables land on emotional beats. Natural to sing.
+6. ORIGINALITY & AUTHENTICITY — feels lived-in, not assembled. Would you steal this line?
+7. MEMORABILITY — stops you. Still audible after you stop reading.
 
-Rules:
+Non-negotiable rules:
 - NEVER leave an abstract emotional statement. Find the physical image that does the emotional work.
-- Match the syllable count and cadence of the original line closely.
-- ALL rewrites MUST use imagery already present in the full song. Extend that world. Do NOT invent new imagery.
+- MATCH the syllable count and cadence of the original line closely. A rewrite that doesn't sing is a failed rewrite.
+- USE ONLY imagery already present in the full song. Read the song. Identify its physical world. Extend that world. Do NOT invent new imagery.
+- The rewrite must feel MORE inevitable than the original — not just different.
 
 Context: "${ctx || 'None provided'}"
 
-FULL SONG (read first — extract the physical world):
+FULL SONG (read first — extract the physical world and central idea):
 ---
 ${lyrics}
 ---
@@ -988,17 +1071,17 @@ Respond ONLY with valid JSON, no markdown:
     {
       "before": "<original line verbatim>",
       "world_anchor": "<specific image from the song you extended>",
-      "after": "<rewrite — close to original syllable count, uses song's world>",
-      "why": "<one sentence: the exact craft move>"
+      "after": "<rewrite — close to original syllable count, uses song's world, feels inevitable>",
+      "why": "<one sentence: the exact craft move that makes this version hit harder>"
     }
   ]
 }`;
 }
 
 function buildSingleRegenPrompt(ctx, lyrics, line) {
-  return `You are a world-class master songwriter. Rewrite ONE weak line.
+  return `You are a professional master songwriter. Rewrite ONE weak line to elite level.
 
-Rules: Match cadence, use imagery already in the song, no abstract statements.
+Rules: Match cadence exactly. Use only imagery already in the song. No abstract statements. The rewrite must feel more inevitable than the original — specific, compressed, authentic.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1015,7 +1098,7 @@ Respond ONLY with valid JSON, no markdown:
     {
       "before": "<original line verbatim>",
       "world_anchor": "<specific image from the song you extended>",
-      "after": "<rewrite>",
+      "after": "<rewrite — same cadence, song's world, feels inevitable>",
       "why": "<one sentence: the exact craft move>"
     }
   ]
@@ -1024,29 +1107,35 @@ Respond ONLY with valid JSON, no markdown:
 
 function buildFullRewritePrompt(ctx, lyrics, grade, targetSections) {
   const flagsText = grade.primary_flags
-    ? `Primary weaknesses:\n- Show vs Tell: ${sanitizeForPrompt(grade.primary_flags.show_vs_tell)}\n- Interchangeable: ${sanitizeForPrompt(grade.primary_flags.interchangeable)}\n- Repetition: ${sanitizeForPrompt(grade.primary_flags.repetition)}`
+    ? `Primary weaknesses:\n- Show vs Tell: ${sanitizeForPrompt(grade.primary_flags.show_vs_tell)}\n- Interchangeable: ${sanitizeForPrompt(grade.primary_flags.interchangeable)}\n- Filler: ${sanitizeForPrompt(grade.primary_flags.filler)}`
     : '';
-  const actionsText = grade.actions ? `Issues to fix:\n${grade.actions.map((a,i) => `${i+1}. ${sanitizeForPrompt(a)}`).join('\n')}` : '';
+  const checklistText = grade.checklist
+    ? `Song's central idea: ${sanitizeForPrompt(grade.checklist.central_idea)}\nCohesion: ${sanitizeForPrompt(grade.checklist.cohesion)}\nImagery quality: ${sanitizeForPrompt(grade.checklist.imagery_quality)}\nProsody issue: ${sanitizeForPrompt(grade.checklist.prosody_issues)}`
+    : '';
+  const actionsText = grade.actions ? `Specific fixes needed:\n${grade.actions.map((a,i) => `${i+1}. ${sanitizeForPrompt(a)}`).join('\n')}` : '';
   const scopeNote = targetSections && targetSections.length
     ? `SCOPE: Only rewrite these sections: ${targetSections.map(s => `[${s}]`).join(', ')}. Leave all other sections EXACTLY as they are.`
     : 'SCOPE: Rewrite the full song.';
 
-  return `You are a world-class master songwriter. Rewrite this song to 10/10 quality.
+  return `You are a professional master songwriter and lyric editor. Rewrite this song to 10/10 quality.
 
 ${scopeNote}
 
 NON-NEGOTIABLE RULES:
-1. NEVER EXPLAIN THE IMAGE — no apposition tags, no "a metaphor for X".
-2. NEVER make a line longer than the original — count syllables, cut and compress.
-3. KEEP what is already strong — only touch weak lines.
-4. NO ABSTRACT EMOTIONAL STATEMENTS — replace with physical images.
-5. STAY INSIDE THE SONG'S WORLD — use only existing imagery.
+1. NEVER EXPLAIN THE IMAGE — no apposition tags, no "a metaphor for X". If the image needs explaining it is the wrong image.
+2. NEVER make a line longer than the original — count syllables. If you are adding words you are doing it wrong.
+3. KEEP what is already strong — only touch weak lines. Strong lines stay verbatim.
+4. NO ABSTRACT EMOTIONAL STATEMENTS — replace every abstract statement with the physical image that does the emotional work.
+5. STAY INSIDE THE SONG'S WORLD — use only imagery already present. Extend the existing world.
 6. PRESERVE STRUCTURE EXACTLY — keep all section labels in order.
-7. EVOLVE REPEATED SECTIONS — second instance deepens the emotional state, change 1-2 lines only.
+7. EVOLVE REPEATED SECTIONS — second instance must deepen the emotional state. Change 1–2 lines only. No copy-paste.
+8. SERVE THE CENTRAL IDEA — every line must support the song's controlling idea. Cut or replace anything that drifts.
+9. THE IRREPLACEABILITY TEST — before keeping any rewrite, ask: could a better line exist here? If yes, keep rewriting.
 
 Context: "${ctx || 'None provided'}"
 
 Grade summary — Overall: ${sanitizeForPrompt(String(grade.overall))}/10
+${checklistText}
 ${flagsText}
 ${actionsText}
 
@@ -1398,7 +1487,7 @@ function renderResults(grade, modelName, rewrites, fullSong, mode, history, targ
   flagsEl.innerHTML = '';
   if (grade.primary_flags) {
     const f = grade.primary_flags;
-    [{ label: 'Show vs Tell', value: f.show_vs_tell }, { label: 'Interchangeable', value: f.interchangeable }, { label: 'Repetition', value: f.repetition }]
+    [{ label: 'Show vs Tell', value: f.show_vs_tell }, { label: 'Interchangeable', value: f.interchangeable }, { label: 'Filler', value: f.filler }]
       .forEach(flag => {
         if (!flag.value || flag.value === 'none') return;
         const row = document.createElement('div');
@@ -1407,6 +1496,28 @@ function renderResults(grade, modelName, rewrites, fullSong, mode, history, targ
         flagsEl.appendChild(row);
       });
   }
+
+  // Checklist
+  const cl = grade.checklist || {};
+  const clGrid = $('checklistGrid');
+  clGrid.innerHTML = '';
+  const cohesionClass = { yes: 'yes', partial: 'partial', no: 'no' }[cl.cohesion?.toLowerCase()] || 'partial';
+  const imgClass = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
+  const clItems = [
+    { label: 'Central idea', val: cl.central_idea || '—', highlight: false },
+    { label: 'Section cohesion', val: cl.cohesion || '—', badge: cohesionClass },
+    { label: 'Imagery quality', val: cl.imagery_quality || '—', badge: imgClass },
+    { label: 'Prosody issue', val: cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${cl.prosody_issues}"` : 'None identified', highlight: false },
+    { label: 'Most memorable line', val: cl.most_memorable_line || '—', highlight: true },
+  ];
+  clItems.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'checklist-item';
+    const badge = item.badge ? `<div><span class="checklist-badge ${item.badge}">${esc(item.val)}</span></div>` : '';
+    const valHtml = badge || `<div class="checklist-item-val${item.highlight ? ' highlight' : ''}">${esc(item.val)}</div>`;
+    el.innerHTML = `<div class="checklist-item-label">${esc(item.label)}</div>${valHtml}`;
+    clGrid.appendChild(el);
+  });
 
   // Mode sections
   $('surgicalSection').style.display = mode === 'surgical' ? '' : 'none';
