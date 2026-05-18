@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v2.1</title>
+<title>Lyrics Grader v2.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -414,7 +414,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.2</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.3</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -436,7 +436,6 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
       </div>
     </details>
 
-    <!-- Onboarding hint -->
     <div class="onboard-hint" id="onboardHint">
       <span class="onboard-icon">↯</span>
       <div class="onboard-body">
@@ -446,7 +445,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
           Use <code>[Verse 1]</code> / <code>[Chorus]</code> labels in your lyrics to unlock section targeting in Full Rewrite mode.
         </div>
       </div>
-      <button class="onboard-dismiss" onclick="dismissHint()" title="Dismiss">×</button>
+      <button class="onboard-dismiss" id="onboardDismiss" title="Dismiss">×</button>
     </div>
 
     <div class="card">
@@ -467,18 +466,17 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
       <div class="mode-label">Choose mode</div>
       <div class="btn-row">
-        <button class="btn-mode surgical" id="surgicalBtn" onclick="startGrade('surgical')">
+        <button class="btn-mode surgical" id="surgicalBtn">
           <span class="btn-mode-title">Surgical Fix</span>
           <span class="btn-mode-sub">Grade + rewrite the weakest lines</span>
         </button>
-        <button class="btn-mode full" id="fullBtn" onclick="startGrade('full')">
+        <button class="btn-mode full" id="fullBtn">
           <span class="btn-mode-title">Full Rewrite</span>
           <span class="btn-mode-sub">Grade + rewrite selected sections to 10/10</span>
         </button>
       </div>
 
-      <!-- Advanced settings -->
-      <button class="advanced-toggle" id="advancedToggle" onclick="toggleAdvanced()">
+      <button class="advanced-toggle" id="advancedToggle">
         Advanced settings <span class="adv-chevron">▾</span>
       </button>
       <div class="advanced-panel" id="advancedPanel">
@@ -495,7 +493,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
           </div>
           <div class="control-group">
             <span class="control-label">Rewrite scope</span>
-            <select class="control-select" id="rewriteScope" onchange="handleScopeChange()">
+            <select class="control-select" id="rewriteScope">
               <option value="full">Full song</option>
               <option value="sections">Select sections</option>
             </select>
@@ -509,36 +507,30 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
             </select>
           </div>
         </div>
-        <!-- Section picker (shown when scope = sections) -->
         <div class="section-picker" id="sectionPicker">
           <div class="section-picker-label">Select sections to rewrite</div>
           <div class="section-chips" id="sectionChips">
-            <span class="section-chip section-chip-all selected" data-section="all" onclick="toggleSectionAll()">All Sections</span>
+            <span class="section-chip section-chip-all selected" data-section="all" id="allSectionsChip">All Sections</span>
           </div>
         </div>
       </div>
 
-      <button class="btn-cancel" id="cancelBtn" onclick="cancelRequest()">Cancel</button>
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
     </div>
   </div>
 
   <!-- Phase 2: Results -->
   <div class="phase" id="phaseResults">
 
-    <!-- Delta banner -->
     <div class="delta-banner" id="deltaBanner"></div>
-
-    <!-- Partial failure notice -->
     <div class="partial-notice" id="partialNotice"></div>
 
-    <!-- History -->
     <div class="history-row" id="historyRow" style="display:none">
       <span class="history-label" id="historyLabel"></span>
-      <button class="btn-history" onclick="toggleHistory()">Session History</button>
+      <button class="btn-history" id="historyToggleBtn">Session History</button>
     </div>
     <div class="history-panel" id="historyPanel"></div>
 
-    <!-- Grade -->
     <div class="section">
       <div class="grade-hd">
         <div class="grade-hd-left">
@@ -556,13 +548,11 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
       <div class="flags-block" id="primaryFlags"></div>
     </div>
 
-    <!-- Checklist -->
     <div class="section" id="checklistSection">
       <div class="sec-hd"><h3>Song Checklist</h3><span class="sec-tag">5 Questions</span></div>
       <div class="checklist-grid" id="checklistGrid"></div>
     </div>
 
-    <!-- Surgical rewrites -->
     <div class="section" id="surgicalSection" style="display:none">
       <div class="sec-hd">
         <h3>Surgical Fixes</h3>
@@ -576,21 +566,19 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
         </div>
       </div>
       <div class="copy-all-row">
-        <button class="btn-copy-all" id="copyAllBtn" onclick="copyAllRewrites()">Copy All Rewrites</button>
+        <button class="btn-copy-all" id="copyAllBtn">Copy All Rewrites</button>
       </div>
       <div id="rewriteResultsList"></div>
 
-      <!-- Accepted buffer -->
       <div class="accepted-buffer" id="acceptedBuffer">
         <div class="accepted-buffer-header">
           <span>Applied lyrics</span>
-          <button class="btn-copy-buffer" id="copyBufferBtn" onclick="copyBuffer()">Copy</button>
+          <button class="btn-copy-buffer" id="copyBufferBtn">Copy</button>
         </div>
         <div class="accepted-buffer-body" id="acceptedBufferBody"></div>
       </div>
     </div>
 
-    <!-- Full rewrite -->
     <div class="section" id="fullSection" style="display:none">
       <div class="sec-hd">
         <h3>Full Song Rewrite</h3>
@@ -606,20 +594,19 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
       <div class="full-rewrite-block">
         <div class="full-rewrite-header">
           <span class="full-rewrite-title">Rewritten Song</span>
-          <button class="btn-copy-full" id="copyFullBtn" onclick="copyFullSong()">Copy Full Song</button>
+          <button class="btn-copy-full" id="copyFullBtn">Copy Full Song</button>
         </div>
         <div class="full-rewrite-body" id="fullRewriteBody"></div>
       </div>
     </div>
 
-    <!-- Actions -->
     <div class="section">
       <div class="sec-hd"><h3>Notes to Reach 10/10</h3><span class="sec-tag">Action</span></div>
       <ol class="action-list" id="actionList"></ol>
     </div>
 
-    <button class="btn-regrade" onclick="regradeFromResults()">↺ Regrade This Song</button>
-    <button class="btn-reset" onclick="resetAll()">← Grade Another Song</button>
+    <button class="btn-regrade" id="regradeBtn">↺ Regrade This Song</button>
+    <button class="btn-reset" id="resetBtn">← Grade Another Song</button>
   </div>
 
   <div class="status-bar" id="statusBar" aria-live="polite">
@@ -632,39 +619,109 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v2.2 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v2.3 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
 const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// Fix #12: model string and display name now match
+const GEMINI_MODEL      = 'gemini-2.0-flash';
+const GEMINI_MODEL_LABEL = 'Gemini 2.0 Flash';
 const TIMEOUT_MS   = 52000;
 const RETRY_DELAY  = 1400;
+// Fix #11: cap session history to avoid sessionStorage overflow
+const MAX_HISTORY  = 20;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// App state
+// ─────────────────────────────────────────────────────────────────────────────
 let controller = null;
 let appState = {
   gradeResult: null, usedModel: null, rewrites: [], fullSong: '', mode: 'surgical',
-  ctx: '', lyrics: '', acceptedRewrites: {}, // index -> after text
-  gradeHistory: [], // [{score, dimensions, timestamp, model, ctx}]
+  ctx: '', lyrics: '', acceptedRewrites: {},
+  gradeHistory: [],
   parsedSections: [], selectedSections: []
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// Fix #9: sanitize with sentence-boundary truncation
+function sanitizeForPrompt(s, maxLen = 300) {
+  s = String(s ?? '').replace(/[`\\]/g, ' ').trim();
+  if (s.length <= maxLen) return s;
+  const cut = s.lastIndexOf(' ', maxLen);
+  return s.slice(0, cut > 0 ? cut : maxLen) + '…';
+}
+
+// Fix #3: robust JSON extraction — handles prose preamble before fence
+function extractJSON(raw) {
+  // Try to extract from a markdown fence first
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fenceMatch) return fenceMatch[1].trim();
+  // Fallback: find the first { or [ and return from there
+  const start = raw.search(/[{[]/);
+  if (start !== -1) return raw.slice(start).trim();
+  return raw.trim();
+}
+
+// Fix #1: compute weighted overall score in JS, don't trust model arithmetic
+// Weights: Emotional Specificity (×2), Imagery (×1), Concept & Cohesion (×2),
+//          Compression (×1), Prosody (×1), Originality (×1), Memorability (×1)
+const DIM_WEIGHTS = [2, 1, 2, 1, 1, 1, 1];
+function computeOverall(dimensions) {
+  if (!dimensions || !dimensions.length) return null;
+  const totalWeight = DIM_WEIGHTS.reduce((a, b) => a + b, 0);
+  const weighted = dimensions.reduce((sum, dim, i) => {
+    const w = DIM_WEIGHTS[i] ?? 1;
+    return sum + (dim.score * w);
+  }, 0);
+  return +(weighted / totalWeight).toFixed(1);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────────────────
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 $('shortcutHint').textContent = isMac ? '⌘↵ = surgical' : 'Ctrl+↵ = surgical';
+
 $('lyrics').addEventListener('input', () => {
   const n = $('lyrics').value.length;
   $('charCount').textContent = `${n.toLocaleString()} character${n !== 1 ? 's' : ''}`;
   parseSectionsFromInput();
 });
+
 $('lyrics').addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (!$('surgicalBtn').disabled) startGrade('surgical'); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    if (!$('surgicalBtn').disabled) startGrade('surgical');
+  }
 });
+
+// Attach all button listeners once — no onclick attributes
+$('surgicalBtn').addEventListener('click', () => startGrade('surgical'));
+$('fullBtn').addEventListener('click', () => startGrade('full'));
+$('cancelBtn').addEventListener('click', cancelRequest);
+$('advancedToggle').addEventListener('click', toggleAdvanced);
+$('rewriteScope').addEventListener('change', handleScopeChange);
+$('onboardDismiss').addEventListener('click', dismissHint);
+$('historyToggleBtn').addEventListener('click', toggleHistory);
+$('regradeBtn').addEventListener('click', regradeFromResults);
+$('resetBtn').addEventListener('click', resetAll);
+$('copyAllBtn').addEventListener('click', copyAllRewrites);
+$('copyFullBtn').addEventListener('click', copyFullSong);
+$('copyBufferBtn').addEventListener('click', copyBuffer);
+$('allSectionsChip').addEventListener('click', toggleSectionAll);
+
+// Init persisted keys
 (function initKeys() {
   try {
     const gk = localStorage.getItem('lg_groq'), mk = localStorage.getItem('lg_gemini');
@@ -672,10 +729,10 @@ $('lyrics').addEventListener('keydown', e => {
     if (mk) $('geminiKey').value = mk;
   } catch(_) {}
 })();
-$('groqKey').addEventListener('input',  e => { try { localStorage.setItem('lg_groq',   e.target.value); } catch(_){} });
+$('groqKey').addEventListener('input',   e => { try { localStorage.setItem('lg_groq',   e.target.value); } catch(_){} });
 $('geminiKey').addEventListener('input', e => { try { localStorage.setItem('lg_gemini', e.target.value); } catch(_){} });
 
-// Load persisted session history
+// Init session history
 (function initHistory() {
   try {
     const h = sessionStorage.getItem('lg_history');
@@ -683,7 +740,7 @@ $('geminiKey').addEventListener('input', e => { try { localStorage.setItem('lg_g
   } catch(_) {}
 })();
 
-// Load onboard dismissed state
+// Init onboard dismiss state
 (function initOnboard() {
   try {
     if (localStorage.getItem('lg_onboard_dismissed') === '1') {
@@ -698,13 +755,13 @@ function dismissHint() {
 }
 
 function toggleAdvanced() {
-  const btn = $('advancedToggle');
-  const panel = $('advancedPanel');
-  btn.classList.toggle('open');
-  panel.classList.toggle('open');
+  $('advancedToggle').classList.toggle('open');
+  $('advancedPanel').classList.toggle('open');
 }
 
-// ── Section parsing ───────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Section parsing
+// ─────────────────────────────────────────────────────────────────────────────
 function parseSections(text) {
   const matches = [...text.matchAll(/^\[([^\]]+)\]/gm)];
   const seen = new Set();
@@ -717,7 +774,6 @@ function parseSectionsFromInput() {
   appState.parsedSections = sections;
   renderSectionChips(sections);
 
-  // Drive the inline section hint
   const hintEl = $('sectionHint');
   const listEl = $('sectionHintList');
   if (sections.length) {
@@ -734,11 +790,12 @@ function renderSectionChips(sections) {
   if (scope !== 'sections') return;
 
   container.innerHTML = '';
+
   const allChip = document.createElement('span');
   allChip.className = 'section-chip section-chip-all' + (appState.selectedSections.length === 0 ? ' selected' : '');
   allChip.dataset.section = 'all';
   allChip.textContent = 'All Sections';
-  allChip.onclick = toggleSectionAll;
+  allChip.addEventListener('click', toggleSectionAll);
   container.appendChild(allChip);
 
   if (!sections.length) {
@@ -751,11 +808,10 @@ function renderSectionChips(sections) {
 
   sections.forEach(s => {
     const chip = document.createElement('span');
-    const isSelected = appState.selectedSections.includes(s);
-    chip.className = 'section-chip' + (isSelected ? ' selected' : '');
+    chip.className = 'section-chip' + (appState.selectedSections.includes(s) ? ' selected' : '');
     chip.dataset.section = s;
     chip.textContent = s;
-    chip.onclick = () => toggleSection(s);
+    chip.addEventListener('click', () => toggleSection(s));
     container.appendChild(chip);
   });
 }
@@ -783,7 +839,6 @@ function handleScopeChange() {
   }
 }
 
-// Extract specific sections from lyrics
 function extractSections(lyrics, sections) {
   if (!sections || !sections.length) return lyrics;
   const lines = lyrics.split('\n');
@@ -791,15 +846,15 @@ function extractSections(lyrics, sections) {
   let inTarget = false;
   lines.forEach(line => {
     const m = line.match(/^\[([^\]]+)\]/);
-    if (m) {
-      inTarget = sections.includes(m[1].trim());
-    }
+    if (m) inTarget = sections.includes(m[1].trim());
     if (inTarget) result.push(line);
   });
   return result.join('\n');
 }
 
-// ── UI helpers ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// UI helpers
+// ─────────────────────────────────────────────────────────────────────────────
 function showPhase(name) {
   ['phaseInput','phaseResults'].forEach(id => $(id).classList.remove('active'));
   $(name).classList.add('active');
@@ -816,6 +871,7 @@ function setStatus(text, step, attempt) {
   else { stepEl.style.display = 'none'; }
   $('statusAttempt').textContent = attempt || '';
 }
+
 function showError(msg, details) {
   const box = $('errorBox');
   box.innerHTML = `<strong>Error:</strong> ${esc(msg)}${details ? `<div class="error-detail">${esc(details)}</div>` : ''}`;
@@ -823,6 +879,7 @@ function showError(msg, details) {
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function clearError() { $('errorBox').classList.remove('active'); }
+
 function showPartialNotice(msg) {
   const el = $('partialNotice');
   el.textContent = msg;
@@ -836,18 +893,27 @@ function setBusy(on) {
   $('cancelBtn').classList.toggle('visible', on);
   if (!on) setStatus('');
 }
+
 function cancelRequest() {
   if (controller) { controller.abort('user_cancel'); controller = null; }
   setBusy(false); clearError();
 }
 
-// ── API layer ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// API layer
+// ─────────────────────────────────────────────────────────────────────────────
 function fetchWithTimeout(url, opts, signal) {
   return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(Object.assign(new Error('Request timed out — check your connection.'), { name: 'TimeoutError' })), TIMEOUT_MS);
-    fetch(url, { ...opts, signal }).then(r => { clearTimeout(t); resolve(r); }).catch(e => { clearTimeout(t); reject(e); });
+    const t = setTimeout(
+      () => reject(Object.assign(new Error('Request timed out — check your connection.'), { name: 'TimeoutError' })),
+      TIMEOUT_MS
+    );
+    fetch(url, { ...opts, signal })
+      .then(r => { clearTimeout(t); resolve(r); })
+      .catch(e => { clearTimeout(t); reject(e); });
   });
 }
+
 async function fetchRetry(url, opts, signal, maxRetries) {
   let attempt = 0;
   while (true) {
@@ -863,28 +929,40 @@ async function fetchRetry(url, opts, signal, maxRetries) {
     });
   }
 }
+
 async function callGroq(key, prompt, modelIdx, signal, retries, temp) {
   const res = await fetchRetry(
     'https://api.groq.com/openai/v1/chat/completions',
-    { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    { method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: GROQ_MODELS[modelIdx], temperature: temp, max_tokens: 3600, messages: [{ role: 'user', content: prompt }] }) },
     signal, retries
   );
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Groq ${res.status}`), { status: res.status }); }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw Object.assign(new Error(err?.error?.message || `Groq ${res.status}`), { status: res.status });
+  }
   const data = await res.json();
   return { text: data.choices[0].message.content, model: GROQ_MODELS[modelIdx] };
 }
+
 async function callGemini(key, prompt, signal, retries, temp) {
   const res = await fetchRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: temp, maxOutputTokens: 3600 } }) },
     signal, retries
   );
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Gemini ${res.status}`), { status: res.status }); }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw Object.assign(new Error(err?.error?.message || `Gemini ${res.status}`), { status: res.status });
+  }
   const data = await res.json();
-  return { text: data.candidates[0].content.parts[0].text, model: 'Gemini 1.5 Flash' };
+  // Fix #12: label matches the actual model string
+  return { text: data.candidates[0].content.parts[0].text, model: GEMINI_MODEL_LABEL };
 }
+
 async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
   const errors = [];
   if (keys.groq) {
@@ -908,32 +986,41 @@ async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
   throw new Error(errors[errors.length - 1] || 'No API available', { cause: errors.join(' | ') });
 }
 
-// ── Parsers ───────────────────────────────────────────────────────────────────
-function stripFences(t) { return t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim(); }
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Parsers
+// ─────────────────────────────────────────────────────────────────────────────
 function parseGrade(text) {
-  const d = JSON.parse(stripFences(text));
-  if (typeof d.overall !== 'number') throw new Error('Missing overall score');
+  // Fix #3: use robust extraction
+  const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.dimensions) || !d.dimensions.length) throw new Error('Missing dimensions');
   if (typeof d.verdict !== 'string') throw new Error('Missing verdict');
   if (!Array.isArray(d.weak_lines)) throw new Error('Missing weak_lines');
   if (!Array.isArray(d.actions)) throw new Error('Missing actions');
   if (!d.primary_flags) d.primary_flags = {};
   if (!d.checklist) d.checklist = {};
+  // Fix #1: compute overall from dimensions in JS, ignore model's arithmetic
+  d.overall = computeOverall(d.dimensions);
   return d;
 }
+
 function parseRewrites(text) {
-  const d = JSON.parse(stripFences(text));
+  // Fix #3: use robust extraction
+  const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
-  return d.rewrites;
+  // Fix #2: validate each item has required fields before returning
+  return d.rewrites.filter(r => r && typeof r.before === 'string' && typeof r.after === 'string');
 }
+
 function parseFullRewrite(text) {
-  const d = JSON.parse(stripFences(text));
+  // Fix #3: use robust extraction
+  const d = JSON.parse(extractJSON(text));
   if (typeof d.rewritten_song !== 'string') throw new Error('Missing rewritten_song');
   return d.rewritten_song;
 }
 
-// ── Prompts ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Prompts
+// ─────────────────────────────────────────────────────────────────────────────
 function buildGradePrompt(ctx, lyrics) {
   return `You are a professional songwriter, A&R consultant, and lyric critic with 30+ years across rock, alternative, metal, and electronic genres. You evaluate lyrics with surgical honesty. You never soften feedback. You cite specific lines.
 
@@ -1008,7 +1095,7 @@ After scoring, run this five-question checklist:
 Respond ONLY with valid JSON, no markdown:
 
 {
-  "overall": <1–10 one decimal, weighted average — Emotional Specificity and Concept Cohesion count double>,
+  "overall": <1–10 one decimal — your holistic assessment, Emotional Specificity and Concept Cohesion should weigh heaviest>,
   "dimensions": [
     { "label": "Emotional Specificity",      "score": <1–10>, "note": "<1–2 sentences — cite the most and least specific line>" },
     { "label": "Imagery & Visual Language",  "score": <1–10>, "note": "<1–2 sentences — name the strongest and weakest image>" },
@@ -1112,7 +1199,9 @@ function buildFullRewritePrompt(ctx, lyrics, grade, targetSections) {
   const checklistText = grade.checklist
     ? `Song's central idea: ${sanitizeForPrompt(grade.checklist.central_idea)}\nCohesion: ${sanitizeForPrompt(grade.checklist.cohesion)}\nImagery quality: ${sanitizeForPrompt(grade.checklist.imagery_quality)}\nProsody issue: ${sanitizeForPrompt(grade.checklist.prosody_issues)}`
     : '';
-  const actionsText = grade.actions ? `Specific fixes needed:\n${grade.actions.map((a,i) => `${i+1}. ${sanitizeForPrompt(a)}`).join('\n')}` : '';
+  const actionsText = grade.actions
+    ? `Specific fixes needed:\n${grade.actions.map((a,i) => `${i+1}. ${sanitizeForPrompt(a)}`).join('\n')}`
+    : '';
   const scopeNote = targetSections && targetSections.length
     ? `SCOPE: Only rewrite these sections: ${targetSections.map(s => `[${s}]`).join(', ')}. Leave all other sections EXACTLY as they are.`
     : 'SCOPE: Rewrite the full song.';
@@ -1150,11 +1239,9 @@ Respond ONLY with valid JSON, no markdown:
 }`;
 }
 
-function sanitizeForPrompt(s) {
-  return String(s ?? '').replace(/[`\\]/g, ' ').slice(0, 300);
-}
-
-// ── Main flow ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Main flow
+// ─────────────────────────────────────────────────────────────────────────────
 async function startGrade(mode) {
   const lyricsRaw = $('lyrics').value.trim();
   const ctxRaw    = $('context').value.trim();
@@ -1197,7 +1284,7 @@ async function startGrade(mode) {
   let pass2Failed = false, pass2Error = '';
 
   if (mode === 'surgical') {
-    const maxLines = lineCount === 'all' ? gradeResult.weak_lines.length : parseInt(lineCount, 10);
+    const maxLines  = lineCount === 'all' ? gradeResult.weak_lines.length : parseInt(lineCount, 10);
     const weakLines = gradeResult.weak_lines.filter(Boolean).slice(0, maxLines);
     const lineLabel = weakLines.length === 1 ? '1 line' : `${weakLines.length} lines`;
     setStatus(`Rewriting the ${lineLabel}…`, 'Pass 2 of 2');
@@ -1225,15 +1312,10 @@ async function startGrade(mode) {
   controller = null;
   setBusy(false);
 
-  // Save to history
+  // Fix #11: cap history at MAX_HISTORY entries
   const prevHistory = [...appState.gradeHistory];
-  prevHistory.push({
-    score: gradeResult.overall,
-    dimensions: gradeResult.dimensions,
-    model: usedModel,
-    ctx,
-    timestamp: Date.now()
-  });
+  prevHistory.push({ score: gradeResult.overall, dimensions: gradeResult.dimensions, model: usedModel, ctx, timestamp: Date.now() });
+  if (prevHistory.length > MAX_HISTORY) prevHistory.shift();
 
   appState = {
     ...appState,
@@ -1244,7 +1326,6 @@ async function startGrade(mode) {
     targetSections
   };
 
-  // Persist history across resets (survives reset, clears on tab close)
   try { sessionStorage.setItem('lg_history', JSON.stringify(prevHistory)); } catch(_) {}
 
   if (pass2Failed) {
@@ -1255,7 +1336,9 @@ async function startGrade(mode) {
   showPhase('phaseResults');
 }
 
-// ── Regen single line ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Regen single line
+// ─────────────────────────────────────────────────────────────────────────────
 async function regenLine(idx) {
   const { gradeResult, lyrics, ctx } = appState;
   const line = appState.rewrites[idx]?.before || gradeResult.weak_lines[idx];
@@ -1269,9 +1352,11 @@ async function regenLine(idx) {
   controller = new AbortController();
   const { signal } = controller;
 
-  // Disable all regen buttons during generation
-  document.querySelectorAll('.btn-regen').forEach(b => b.disabled = true);
-  document.querySelectorAll('.btn-accept').forEach(b => b.disabled = true);
+  // Fix #5: only disable buttons within this specific pair, not all pairs
+  const thisPair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
+  const pairBtns = thisPair ? thisPair.querySelectorAll('button') : [];
+  pairBtns.forEach(b => b.disabled = true);
+
   setStatus(`Regenerating line ${idx + 1}…`);
 
   try {
@@ -1280,9 +1365,14 @@ async function regenLine(idx) {
     try {
       result = parseRewrites(r.text);
     } catch(_) {
-      // Parse failed — retry once at lower temp
+      // Parse failed — retry once at lower temperature
       const r2 = await callAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.6);
-      result = parseRewrites(r2.text);
+      try {
+        result = parseRewrites(r2.text);
+      } catch(parseErr) {
+        // Fix #7: user-friendly message instead of raw parse error
+        throw new Error('Regeneration returned an unexpected format — try once more.');
+      }
     }
     if (result[0]) {
       appState.rewrites[idx] = result[0];
@@ -1291,16 +1381,20 @@ async function regenLine(idx) {
       updateAcceptedBuffer();
     }
   } catch(e) {
-    if (e.name !== 'AbortError') showError(`Regeneration failed: ${e.message}`);
+    if (e.name !== 'AbortError') showError(e.message);
   } finally {
     controller = null;
     setStatus('');
-    document.querySelectorAll('.btn-regen').forEach(b => b.disabled = false);
-    document.querySelectorAll('.btn-accept').forEach(b => b.disabled = false);
+    // Re-enable this pair's buttons (renderRewritePair may have replaced them,
+    // so re-query after potential DOM update)
+    const updatedPair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
+    if (updatedPair) updatedPair.querySelectorAll('button').forEach(b => b.disabled = false);
   }
 }
 
-// ── Accept/skip ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Accept / skip
+// ─────────────────────────────────────────────────────────────────────────────
 function acceptRewrite(idx) {
   const r = appState.rewrites[idx];
   if (!r) return;
@@ -1319,9 +1413,7 @@ function updateRewritePairUI(idx, accepted) {
   const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
   if (!pair) return;
   const afterBlock = pair.querySelector('.line-after, .line-accepted');
-  if (afterBlock) {
-    afterBlock.className = `line-block ${accepted ? 'line-accepted' : 'line-after'}`;
-  }
+  if (afterBlock) afterBlock.className = `line-block ${accepted ? 'line-accepted' : 'line-after'}`;
   const acceptBtn = pair.querySelector('.btn-accept');
   const skipBtn   = pair.querySelector('.btn-skip');
   const badge     = pair.querySelector('.accepted-badge');
@@ -1337,11 +1429,11 @@ function updateAcceptedBuffer() {
     return;
   }
 
-  // Apply rewrites to lyrics
+  // Fix #6: use split/join instead of String.replace() to patch all occurrences
   let result = lyrics;
   rewrites.forEach((r, idx) => {
     if (acceptedRewrites[idx] && r.before) {
-      result = result.replace(r.before, acceptedRewrites[idx]);
+      result = result.split(r.before).join(acceptedRewrites[idx]);
     }
   });
 
@@ -1349,14 +1441,15 @@ function updateAcceptedBuffer() {
   $('acceptedBuffer').classList.add('visible');
 }
 
-// ── History ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// History
+// ─────────────────────────────────────────────────────────────────────────────
 function toggleHistory() {
-  const panel = $('historyPanel');
-  panel.classList.toggle('open');
+  $('historyPanel').classList.toggle('open');
 }
 
 function renderHistory(history) {
-  const row = $('historyRow');
+  const row   = $('historyRow');
   const panel = $('historyPanel');
   if (history.length <= 1) { row.style.display = 'none'; return; }
   row.style.display = 'flex';
@@ -1365,7 +1458,7 @@ function renderHistory(history) {
   panel.innerHTML = '';
   [...history].reverse().forEach((h, i) => {
     const realIdx = history.length - 1 - i;
-    const prev = realIdx > 0 ? history[realIdx - 1] : null;
+    const prev  = realIdx > 0 ? history[realIdx - 1] : null;
     const delta = prev ? +(h.score - prev.score).toFixed(1) : null;
     const entry = document.createElement('div');
     entry.className = 'history-entry';
@@ -1401,9 +1494,8 @@ function renderDeltaBanner(history) {
   const scores = document.createElement('div');
   scores.className = 'delta-scores';
 
-  // Overall
   const overallDelta = +(curr.score - prev.score).toFixed(1);
-  const overallItem = document.createElement('div');
+  const overallItem  = document.createElement('div');
   overallItem.className = 'delta-item';
   overallItem.innerHTML = `
     <span class="delta-item-label">Overall</span>
@@ -1413,7 +1505,6 @@ function renderDeltaBanner(history) {
     <span class="delta-item-val ${overallDelta > 0 ? 'up' : overallDelta < 0 ? 'down' : 'same'}">${overallDelta > 0 ? '+' : ''}${overallDelta}</span>`;
   scores.appendChild(overallItem);
 
-  // Per-dimension deltas
   if (prev.dimensions && curr.dimensions) {
     curr.dimensions.forEach((dim, i) => {
       const prevDim = prev.dimensions[i];
@@ -1433,20 +1524,20 @@ function renderDeltaBanner(history) {
   banner.classList.add('active');
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Render results
+// ─────────────────────────────────────────────────────────────────────────────
 function renderResults(grade, modelName, rewrites, fullSong, mode, history, targetSections) {
   renderDeltaBanner(history);
   renderHistory(history);
   clearPartialNotice();
 
-  // Overall + delta
   $('overallNum').textContent = grade.overall;
   $('modelTag').textContent   = `via ${modelName}`;
 
-  const currHistory = history;
   const overallDeltaEl = $('overallDelta');
-  if (currHistory.length >= 2) {
-    const prev = currHistory[currHistory.length - 2];
+  if (history.length >= 2) {
+    const prev = history[history.length - 2];
     const d = +(grade.overall - prev.score).toFixed(1);
     overallDeltaEl.textContent = d > 0 ? `▲ +${d} from last` : d < 0 ? `▼ ${d} from last` : '— no change';
     overallDeltaEl.className = `overall-delta ${d > 0 ? 'up' : d < 0 ? 'down' : 'same'}`;
@@ -1454,10 +1545,9 @@ function renderResults(grade, modelName, rewrites, fullSong, mode, history, targ
     overallDeltaEl.textContent = '';
   }
 
-  // Score grid
   const grid = $('scoreGrid');
   grid.innerHTML = '';
-  const prevGrade = currHistory.length >= 2 ? currHistory[currHistory.length - 2] : null;
+  const prevGrade = history.length >= 2 ? history[history.length - 2] : null;
   grade.dimensions.forEach((dim, i) => {
     const pct = Math.min(100, Math.max(0, (dim.score / 10) * 100)).toFixed(1);
     let deltaBadge = '';
@@ -1487,44 +1577,46 @@ function renderResults(grade, modelName, rewrites, fullSong, mode, history, targ
   flagsEl.innerHTML = '';
   if (grade.primary_flags) {
     const f = grade.primary_flags;
-    [{ label: 'Show vs Tell', value: f.show_vs_tell }, { label: 'Interchangeable', value: f.interchangeable }, { label: 'Filler', value: f.filler }]
-      .forEach(flag => {
-        if (!flag.value || flag.value === 'none') return;
-        const row = document.createElement('div');
-        row.className = 'flag-row';
-        row.innerHTML = `<span class="flag-label">${esc(flag.label)}</span><span class="flag-value">"${esc(flag.value)}"</span>`;
-        flagsEl.appendChild(row);
-      });
+    [
+      { label: 'Show vs Tell',    value: f.show_vs_tell },
+      { label: 'Interchangeable', value: f.interchangeable },
+      { label: 'Filler',          value: f.filler }
+    ].forEach(flag => {
+      if (!flag.value || flag.value === 'none') return;
+      const row = document.createElement('div');
+      row.className = 'flag-row';
+      row.innerHTML = `<span class="flag-label">${esc(flag.label)}</span><span class="flag-value">"${esc(flag.value)}"</span>`;
+      flagsEl.appendChild(row);
+    });
   }
 
   // Checklist
-  const cl = grade.checklist || {};
+  const cl     = grade.checklist || {};
   const clGrid = $('checklistGrid');
   clGrid.innerHTML = '';
   const cohesionClass = { yes: 'yes', partial: 'partial', no: 'no' }[cl.cohesion?.toLowerCase()] || 'partial';
-  const imgClass = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
+  const imgClass      = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
   const clItems = [
-    { label: 'Central idea', val: cl.central_idea || '—', highlight: false },
-    { label: 'Section cohesion', val: cl.cohesion || '—', badge: cohesionClass },
-    { label: 'Imagery quality', val: cl.imagery_quality || '—', badge: imgClass },
-    { label: 'Prosody issue', val: cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${cl.prosody_issues}"` : 'None identified', highlight: false },
+    { label: 'Central idea',        val: cl.central_idea || '—',   highlight: false },
+    { label: 'Section cohesion',    val: cl.cohesion || '—',       badge: cohesionClass },
+    { label: 'Imagery quality',     val: cl.imagery_quality || '—', badge: imgClass },
+    { label: 'Prosody issue',       val: cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${cl.prosody_issues}"` : 'None identified', highlight: false },
     { label: 'Most memorable line', val: cl.most_memorable_line || '—', highlight: true },
   ];
   clItems.forEach(item => {
     const el = document.createElement('div');
     el.className = 'checklist-item';
-    const badge = item.badge ? `<div><span class="checklist-badge ${item.badge}">${esc(item.val)}</span></div>` : '';
+    const badge  = item.badge ? `<div><span class="checklist-badge ${item.badge}">${esc(item.val)}</span></div>` : '';
     const valHtml = badge || `<div class="checklist-item-val${item.highlight ? ' highlight' : ''}">${esc(item.val)}</div>`;
     el.innerHTML = `<div class="checklist-item-label">${esc(item.label)}</div>${valHtml}`;
     clGrid.appendChild(el);
   });
 
-  // Mode sections
   $('surgicalSection').style.display = mode === 'surgical' ? '' : 'none';
   $('fullSection').style.display     = mode === 'full'     ? '' : 'none';
 
   if (mode === 'surgical') {
-    $('surgicalCountTag').textContent = rewrites.length ? `${rewrites.length} fixed` : '—';
+    $('surgicalCountTag').textContent   = rewrites.length ? `${rewrites.length} fixed` : '—';
     $('surgicalMasterDesc').textContent = rewrites.length
       ? `${rewrites.length} weakest line${rewrites.length > 1 ? 's' : ''} rewritten using the song's own imagery. Accept, skip, or regenerate each one.`
       : 'No rewrites generated — try again.';
@@ -1547,17 +1639,14 @@ function renderResults(grade, modelName, rewrites, fullSong, mode, history, targ
   }
 
   if (mode === 'full') {
-    const scopeLabel = targetSections && targetSections.length
-      ? targetSections.join(', ')
-      : 'Full Song';
-    $('fullScopeTag').textContent = scopeLabel;
+    const scopeLabel = targetSections && targetSections.length ? targetSections.join(', ') : 'Full Song';
+    $('fullScopeTag').textContent  = scopeLabel;
     $('fullMasterDesc').textContent = targetSections && targetSections.length
       ? `Sections rewritten: ${targetSections.join(', ')}. All other sections preserved exactly.`
       : 'Every weak line elevated. Strong lines preserved. Same world, sharper language.';
     $('fullRewriteBody').textContent = fullSong || 'Rewrite failed — try again.';
   }
 
-  // Actions
   const aList = $('actionList');
   aList.innerHTML = '';
   grade.actions.forEach(a => {
@@ -1577,28 +1666,34 @@ function renderRewritePair(idx, r) {
 function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
   const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
+  // Note: copy-btn data-copy uses the raw text stored in a JS closure, not injected HTML,
+  // so no XSS risk and no need to double-escape for copy operation
   pair.innerHTML = `
     ${anchor}
     <div class="copyable-block">
       <div class="line-block line-before"><div class="line-tag">Original</div>${esc(r.before)}</div>
-      <button class="copy-btn" data-copy="${esc(r.before)}">Copy</button>
+      <button class="copy-btn js-copy-before">Copy</button>
     </div>
     <div class="copyable-block">
       <div class="line-block ${isAccepted ? 'line-accepted' : 'line-after'}"><div class="line-tag">Master Rewrite</div>${esc(r.after)}</div>
-      <button class="copy-btn" data-copy="${esc(r.after)}">Copy</button>
+      <button class="copy-btn js-copy-after">Copy</button>
     </div>
-    ${r.why ? `<div class="copyable-block"><div class="rewrite-why">${esc(r.why)}</div><button class="copy-btn" data-copy="${esc(r.why)}">Copy</button></div>` : ''}
+    ${r.why ? `<div class="copyable-block"><div class="rewrite-why">${esc(r.why)}</div><button class="copy-btn js-copy-why">Copy</button></div>` : ''}
     <div class="rewrite-actions">
       <button class="btn-accept${isAccepted ? ' accepted' : ''}" data-idx="${idx}">${isAccepted ? 'Accepted ✓' : 'Accept'}</button>
-      <button class="btn-skip" data-idx="${idx}" ${!isAccepted ? 'disabled' : ''}>Skip</button>
+      <button class="btn-skip" data-idx="${idx}"${!isAccepted ? ' disabled' : ''}>Skip</button>
       <button class="btn-regen" data-idx="${idx}">↻ Regenerate</button>
       <span class="accepted-badge" style="display:${isAccepted ? '' : 'none'}">Applied to buffer</span>
     </div>`;
 
-  // Attach events via data attributes (avoids onclick injection)
-  pair.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => copyText(btn, btn.dataset.copy));
-  });
+  // Fix #10: copy buttons use closure over raw strings — no escaped values in attributes
+  const beforeBtn = pair.querySelector('.js-copy-before');
+  const afterBtn  = pair.querySelector('.js-copy-after');
+  const whyBtn    = pair.querySelector('.js-copy-why');
+  if (beforeBtn) beforeBtn.addEventListener('click', () => copyText(beforeBtn, r.before));
+  if (afterBtn)  afterBtn.addEventListener('click',  () => copyText(afterBtn,  r.after));
+  if (whyBtn)    whyBtn.addEventListener('click',    () => copyText(whyBtn,    r.why || ''));
+
   pair.querySelectorAll('.btn-accept').forEach(btn => {
     btn.addEventListener('click', () => acceptRewrite(parseInt(btn.dataset.idx)));
   });
@@ -1610,7 +1705,9 @@ function renderRewritePairInto(pair, idx, r) {
   });
 }
 
-// ── Regrade from results ──────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Regrade from results
+// ─────────────────────────────────────────────────────────────────────────────
 function regradeFromResults() {
   $('lyrics').value = appState.lyrics;
   $('context').value = appState.ctx;
@@ -1619,46 +1716,16 @@ function regradeFromResults() {
   showPhase('phaseInput');
 }
 
-// ── Copy helpers ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Copy helpers
+// ─────────────────────────────────────────────────────────────────────────────
 function copyText(btn, text) {
-  const done = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); };
-  navigator.clipboard.writeText(text).then(done).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    done();
-  });
-}
-function copyAllRewrites() {
-  const { rewrites } = appState;
-  if (!rewrites.length) return;
-  const text = rewrites.map(r => `Original: ${r.before}\nRewrite: ${r.after}${r.why ? `\nWhy: ${r.why}` : ''}`).join('\n\n');
-  const btn = $('copyAllBtn');
-  const done = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy All Rewrites'; btn.classList.remove('copied'); }, 2000); };
-  navigator.clipboard.writeText(text).then(done).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    done();
-  });
-}
-function copyFullSong() {
-  const text = appState.fullSong;
-  if (!text) return;
-  const btn = $('copyFullBtn');
-  const done = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy Full Song'; btn.classList.remove('copied'); }, 2000); };
-  navigator.clipboard.writeText(text).then(done).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    done();
-  });
-}
-function copyBuffer() {
-  const text = $('acceptedBufferBody').textContent;
-  if (!text) return;
-  const btn = $('copyBufferBtn');
-  const done = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); };
+  const done = () => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig === 'Copied!' ? 'Copy' : orig; btn.classList.remove('copied'); }, 2000);
+  };
   navigator.clipboard.writeText(text).then(done).catch(() => {
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
@@ -1667,10 +1734,32 @@ function copyBuffer() {
   });
 }
 
-// ── Reset ─────────────────────────────────────────────────────────────────────
+function copyAllRewrites() {
+  const { rewrites } = appState;
+  if (!rewrites.length) return;
+  const text = rewrites.map(r => `Original: ${r.before}\nRewrite: ${r.after}${r.why ? `\nWhy: ${r.why}` : ''}`).join('\n\n');
+  const btn  = $('copyAllBtn');
+  copyText(btn, text);
+}
+
+function copyFullSong() {
+  const text = appState.fullSong;
+  if (!text) return;
+  copyText($('copyFullBtn'), text);
+}
+
+function copyBuffer() {
+  const text = $('acceptedBufferBody').textContent;
+  if (!text) return;
+  copyText($('copyBufferBtn'), text);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reset
+// ─────────────────────────────────────────────────────────────────────────────
 function resetAll() {
-  const savedCtx = $('context').value; // preserve context
-  const savedHistory = appState.gradeHistory; // preserve history across resets
+  const savedCtx     = $('context').value;
+  const savedHistory = appState.gradeHistory;
   appState = {
     gradeResult: null, usedModel: null, rewrites: [], fullSong: '', mode: 'surgical',
     ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: savedHistory,
@@ -1678,13 +1767,23 @@ function resetAll() {
   };
   $('lyrics').value = '';
   $('charCount').textContent = '0 characters';
-  $('context').value = savedCtx; // restore context
+  $('context').value = savedCtx;
   $('rewriteResultsList').innerHTML = '';
   $('fullRewriteBody').textContent = '';
   $('actionList').innerHTML = '';
   $('scoreGrid').innerHTML = '';
   $('primaryFlags').innerHTML = '';
-  $('sectionChips').innerHTML = '<span class="section-chip section-chip-all selected" data-section="all" onclick="toggleSectionAll()">All Sections</span>';
+
+  // Rebuild section chips cleanly
+  const chips = $('sectionChips');
+  chips.innerHTML = '';
+  const allChip = document.createElement('span');
+  allChip.className = 'section-chip section-chip-all selected';
+  allChip.dataset.section = 'all';
+  allChip.textContent = 'All Sections';
+  allChip.addEventListener('click', toggleSectionAll);
+  chips.appendChild(allChip);
+
   $('sectionPicker').classList.remove('visible');
   $('rewriteScope').value = 'full';
   $('deltaBanner').classList.remove('active');
