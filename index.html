@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v2.3</title>
+<title>Lyrics Grader v2.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -278,6 +278,9 @@ textarea { min-height: 220px; line-height: 1.85; font-size: 0.87rem; }
 .btn-regen:hover:not(:disabled) { opacity: 1; background: var(--gold-dim); }
 .btn-regen:disabled { opacity: 0.3; cursor: not-allowed; }
 .accepted-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-text); background: var(--blue-soft); border: 1px solid var(--blue-line); padding: 3px 8px; border-radius: 4px; }
+.syllable-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; }
+.syllable-badge.syl-ok   { color: var(--text-3); background: var(--surface-3); border: 1px solid var(--border); }
+.syllable-badge.syl-warn { color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(212,168,67,0.3); }
 
 /* Accepted buffer */
 .accepted-buffer { display: none; margin-top: 20px; }
@@ -414,7 +417,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.3</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.4</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -619,7 +622,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v2.3 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v2.4 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1008,7 +1011,20 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
   // Fix #2: validate each item has required fields before returning
-  return d.rewrites.filter(r => r && typeof r.before === 'string' && typeof r.after === 'string');
+  // Strip diagnostic fields (syllable_count_*, adjacency_check) — used by model for
+  // self-checking only, not rendered in UI. Preserve syllable delta as metadata.
+  return d.rewrites
+    .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
+    .map(r => ({
+      before:        r.before,
+      after:         r.after,
+      world_anchor:  r.world_anchor  || '',
+      why:           r.why           || '',
+      // Carry syllable delta as optional metadata (positive = rewrite is longer)
+      syllable_delta: (typeof r.syllable_count_rewrite === 'number' && typeof r.syllable_count_original === 'number')
+        ? r.syllable_count_rewrite - r.syllable_count_original
+        : null
+    }));
 }
 
 function parseFullRewrite(text) {
@@ -1136,15 +1152,29 @@ A line reaches elite level only when ALL SEVEN fire:
 6. ORIGINALITY & AUTHENTICITY — feels lived-in, not assembled. Would you steal this line?
 7. MEMORABILITY — stops you. Still audible after you stop reading.
 
-Non-negotiable rules:
-- NEVER leave an abstract emotional statement. Find the physical image that does the emotional work.
-- MATCH the syllable count and cadence of the original line closely. A rewrite that doesn't sing is a failed rewrite.
-- USE ONLY imagery already present in the full song. Read the song. Identify its physical world. Extend that world. Do NOT invent new imagery.
-- The rewrite must feel MORE inevitable than the original — not just different.
+NON-NEGOTIABLE RULES — violating any one of these makes the rewrite a failure:
+
+RULE 1 — SYLLABLE COUNT
+Count the syllables in the original line. Your rewrite must be within ±1 syllable. A rewrite that doesn't fit the melody is a failed rewrite. Count carefully. If you cannot match the count without weakening the line, find a different image.
+
+RULE 2 — NO DUPLICATION WITH ADJACENT LINES
+Before finalising, read the two lines immediately before and after the target line in the full song. Your rewrite must not introduce a word, image, or phrase that already appears in those adjacent lines. Duplication kills momentum.
+
+RULE 3 — NO INVENTED IMAGERY
+Use ONLY images already present in the full song. Read the full song first. Catalogue its physical world — every concrete noun, every action verb. Your rewrite extends that world. It does not add to it.
+
+RULE 4 — NO ABSTRACT EMOTIONAL STATEMENTS
+Never state a feeling. Find the physical image that makes the listener feel it without being told to.
+
+RULE 5 — THE WHY MUST NAME A SPECIFIC CRAFT MOVE
+Your "why" field must name the exact technique used: e.g. "replaces abstract verb with tactile image," "tightens from 3 stressed syllables to 2," "makes the antagonist concrete rather than generic." Phrases like "hits harder," "is more impactful," or "is more effective" are not craft analysis — they are empty assertions. If you cannot name the move, the rewrite is not yet good enough.
+
+RULE 6 — THE INEVITABILITY TEST
+Before submitting each rewrite, ask yourself: does this feel like the only line that could exist here, or just a different line? If it's just different, rewrite again.
 
 Context: "${ctx || 'None provided'}"
 
-FULL SONG (read first — extract the physical world and central idea):
+FULL SONG (read completely before writing a single rewrite — extract every concrete image, every named object, every physical action):
 ---
 ${lyrics}
 ---
@@ -1157,9 +1187,12 @@ Respond ONLY with valid JSON, no markdown:
   "rewrites": [
     {
       "before": "<original line verbatim>",
-      "world_anchor": "<specific image from the song you extended>",
-      "after": "<rewrite — close to original syllable count, uses song's world, feels inevitable>",
-      "why": "<one sentence: the exact craft move that makes this version hit harder>"
+      "syllable_count_original": <integer — count carefully>,
+      "syllable_count_rewrite": <integer — must be within ±1 of original>,
+      "world_anchor": "<the specific image already in the song that you extended — quote it verbatim from the lyrics>",
+      "adjacency_check": "<quote the line immediately before and after the target in the full song>",
+      "after": "<rewrite — within ±1 syllable of original, uses only existing imagery, feels inevitable>",
+      "why": "<one sentence naming the exact craft move — no empty assertions>"
     }
   ]
 }`;
@@ -1168,11 +1201,23 @@ Respond ONLY with valid JSON, no markdown:
 function buildSingleRegenPrompt(ctx, lyrics, line) {
   return `You are a professional master songwriter. Rewrite ONE weak line to elite level.
 
-Rules: Match cadence exactly. Use only imagery already in the song. No abstract statements. The rewrite must feel more inevitable than the original — specific, compressed, authentic.
+NON-NEGOTIABLE RULES — violating any one makes the rewrite a failure:
+
+RULE 1 — SYLLABLE COUNT: Count the syllables in the original line. Your rewrite must be within ±1 syllable. Count carefully before submitting.
+
+RULE 2 — NO ADJACENCY DUPLICATION: Read the two lines immediately before and after this line in the full song. Do not reuse any word, image, or phrase that already appears there.
+
+RULE 3 — NO INVENTED IMAGERY: Use only images already present in the full song. Catalogue the song's concrete nouns and physical actions first. Extend that world only.
+
+RULE 4 — NO ABSTRACT EMOTIONAL STATEMENTS: Find the physical image that does the emotional work. Never state a feeling directly.
+
+RULE 5 — NAME THE CRAFT MOVE: Your "why" must name the exact technique used (e.g. "replaces abstract verb with tactile image," "tightens stressed syllable pattern"). "Hits harder" or "more impactful" are not acceptable — they describe nothing.
+
+RULE 6 — INEVITABILITY TEST: Ask before submitting — does this feel like the only line that could exist here? If it's just different, rewrite again.
 
 Context: "${ctx || 'None provided'}"
 
-FULL SONG:
+FULL SONG (read completely — catalogue every concrete image before writing):
 ---
 ${lyrics}
 ---
@@ -1184,9 +1229,12 @@ Respond ONLY with valid JSON, no markdown:
   "rewrites": [
     {
       "before": "<original line verbatim>",
-      "world_anchor": "<specific image from the song you extended>",
-      "after": "<rewrite — same cadence, song's world, feels inevitable>",
-      "why": "<one sentence: the exact craft move>"
+      "syllable_count_original": <integer — count carefully>,
+      "syllable_count_rewrite": <integer — must be within ±1>,
+      "world_anchor": "<quote the specific image from the song you extended — verbatim>",
+      "adjacency_check": "<quote the line immediately before and after the target in the full song>",
+      "after": "<rewrite — within ±1 syllable, only existing imagery, inevitable>",
+      "why": "<one sentence naming the exact craft move — no empty assertions>"
     }
   ]
 }`;
@@ -1212,14 +1260,15 @@ ${scopeNote}
 
 NON-NEGOTIABLE RULES:
 1. NEVER EXPLAIN THE IMAGE — no apposition tags, no "a metaphor for X". If the image needs explaining it is the wrong image.
-2. NEVER make a line longer than the original — count syllables. If you are adding words you are doing it wrong.
+2. NEVER make a line longer than the original — count syllables before and after every change. Adding words is always wrong.
 3. KEEP what is already strong — only touch weak lines. Strong lines stay verbatim.
 4. NO ABSTRACT EMOTIONAL STATEMENTS — replace every abstract statement with the physical image that does the emotional work.
-5. STAY INSIDE THE SONG'S WORLD — use only imagery already present. Extend the existing world.
+5. STAY INSIDE THE SONG'S WORLD — use only imagery already present. Extend the existing world. Do not import new metaphors.
 6. PRESERVE STRUCTURE EXACTLY — keep all section labels in order.
 7. EVOLVE REPEATED SECTIONS — second instance must deepen the emotional state. Change 1–2 lines only. No copy-paste.
 8. SERVE THE CENTRAL IDEA — every line must support the song's controlling idea. Cut or replace anything that drifts.
-9. THE IRREPLACEABILITY TEST — before keeping any rewrite, ask: could a better line exist here? If yes, keep rewriting.
+9. NO ADJACENCY DUPLICATION — when rewriting a line, check the two lines immediately surrounding it. Do not introduce a word or image that already appears in those neighbours. Duplication in adjacent lines kills momentum.
+10. THE IRREPLACEABILITY TEST — before finalising any rewrite, ask: is this the only line that could exist here, or just a different line? If just different, rewrite again.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1666,8 +1715,17 @@ function renderRewritePair(idx, r) {
 function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
   const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
-  // Note: copy-btn data-copy uses the raw text stored in a JS closure, not injected HTML,
-  // so no XSS risk and no need to double-escape for copy operation
+
+  // Syllable delta badge — surfaces when model reported counts
+  // Warn (amber) if delta > 1 (model may have violated the ±1 rule)
+  let syllableBadge = '';
+  if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
+    const d = r.syllable_delta;
+    const sign = d > 0 ? '+' : '';
+    const cls  = Math.abs(d) > 1 ? 'syl-warn' : 'syl-ok';
+    syllableBadge = `<span class="syllable-badge ${cls}" title="Syllable delta vs original">${sign}${d} syl</span>`;
+  }
+
   pair.innerHTML = `
     ${anchor}
     <div class="copyable-block">
@@ -1683,6 +1741,7 @@ function renderRewritePairInto(pair, idx, r) {
       <button class="btn-accept${isAccepted ? ' accepted' : ''}" data-idx="${idx}">${isAccepted ? 'Accepted ✓' : 'Accept'}</button>
       <button class="btn-skip" data-idx="${idx}"${!isAccepted ? ' disabled' : ''}>Skip</button>
       <button class="btn-regen" data-idx="${idx}">↻ Regenerate</button>
+      ${syllableBadge}
       <span class="accepted-badge" style="display:${isAccepted ? '' : 'none'}">Applied to buffer</span>
     </div>`;
 
