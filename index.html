@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.6</title>
+<title>Lyrics Grader v3.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -423,7 +423,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.6</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.7</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -633,7 +633,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v3.6 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.7 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -643,10 +643,11 @@ const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
 // Fix #12: model string and display name now match
 const GEMINI_MODEL      = 'gemini-2.0-flash';
 const GEMINI_MODEL_LABEL = 'Gemini 2.0 Flash';
-// v3.6: Claude Sonnet as primary rewriter when Anthropic key is present
+// v3.7: Claude Sonnet as primary rewriter when Anthropic key is present
 const CLAUDE_REWRITE_MODEL       = 'claude-sonnet-4-6';
 const CLAUDE_REWRITE_MODEL_LABEL = 'Claude Sonnet 4.6';
-const TIMEOUT_MS   = 52000;
+const TIMEOUT_MS        = 52000;   // grade pass (Groq — fast)
+const TIMEOUT_MS_CLAUDE = 120000;  // rewrite pass (Claude Sonnet — slower, complex prompt)
 const RETRY_DELAY  = 1400;
 // Fix #11: cap session history to avoid sessionStorage overflow
 const MAX_HISTORY  = 20;
@@ -921,11 +922,11 @@ function cancelRequest() {
 // ─────────────────────────────────────────────────────────────────────────────
 // API layer
 // ─────────────────────────────────────────────────────────────────────────────
-function fetchWithTimeout(url, opts, signal) {
+function fetchWithTimeout(url, opts, signal, timeoutMs = TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const t = setTimeout(
       () => reject(Object.assign(new Error('Request timed out — check your connection.'), { name: 'TimeoutError' })),
-      TIMEOUT_MS
+      timeoutMs
     );
     fetch(url, { ...opts, signal })
       .then(r => { clearTimeout(t); resolve(r); })
@@ -933,10 +934,10 @@ function fetchWithTimeout(url, opts, signal) {
   });
 }
 
-async function fetchRetry(url, opts, signal, maxRetries) {
+async function fetchRetry(url, opts, signal, maxRetries, timeoutMs = TIMEOUT_MS) {
   let attempt = 0;
   while (true) {
-    const res = await fetchWithTimeout(url, opts, signal);
+    const res = await fetchWithTimeout(url, opts, signal, timeoutMs);
     if (res.status !== 429 || attempt >= maxRetries) return res;
     attempt++;
     const ra = parseInt(res.headers.get('retry-after') || '0', 10);
@@ -1005,7 +1006,7 @@ async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
   throw new Error(errors[errors.length - 1] || 'No API available', { cause: errors.join(' | ') });
 }
 
-// v3.6: Claude Sonnet via Anthropic API — primary rewriter
+// v3.7: Claude Sonnet via Anthropic API — primary rewriter
 async function callClaude(key, prompt, signal, retries, temp) {
   const res = await fetchRetry(
     'https://api.anthropic.com/v1/messages',
@@ -1022,7 +1023,7 @@ async function callClaude(key, prompt, signal, retries, temp) {
         temperature: temp,
         messages: [{ role: 'user', content: prompt }]
       }) },
-    signal, retries
+    signal, retries, TIMEOUT_MS_CLAUDE  // longer timeout — Sonnet is slower than Groq
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -1039,7 +1040,7 @@ async function callClaude(key, prompt, signal, retries, temp) {
   return { text, model: CLAUDE_REWRITE_MODEL_LABEL };
 }
 
-// v3.6: Rewrite-specific API router.
+// v3.7: Rewrite-specific API router.
 // Prefers Claude Sonnet (best instruction-following for complex constraints).
 // Falls back to Groq then Gemini if Anthropic key absent or fails.
 async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
@@ -1087,7 +1088,7 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
 
-  // v3.6: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
+  // v3.7: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
   // The model's breakdown integers are treated as scaffolding only; they are often
   // fabricated to support a false PASS claim. We count independently from the
   // actual before/after strings and override the model's verdict when they conflict.
@@ -1122,7 +1123,7 @@ function parseRewrites(text) {
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
-      // Synonym-swap check (v3.6)
+      // Synonym-swap check (v3.7)
       const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim() : '';
       const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '';
 
@@ -1130,7 +1131,7 @@ function parseRewrites(text) {
       // for badge rendering (it's still in the JSON but we don't trust it)
       const sylPassEffective = delta === null || Math.abs(delta) <= 1;
 
-      // Client-side adjacency check (v3.6): parse Step B words from adjacency_check
+      // Client-side adjacency check (v3.7): parse Step B words from adjacency_check
       // field and test them against the actual after string. Catches cases where the
       // model falsely asserts CLEAR without checking its candidate.
       const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
@@ -1555,7 +1556,7 @@ async function startGrade(mode) {
     const maxLines  = lineCount === 'all' ? gradeResult.weak_lines.length : parseInt(lineCount, 10);
     const weakLines = gradeResult.weak_lines.filter(Boolean).slice(0, maxLines);
     const lineLabel = weakLines.length === 1 ? '1 line' : `${weakLines.length} lines`;
-    setStatus(`Rewriting the ${lineLabel}…`, 'Pass 2 of 2');
+    setStatus(`Rewriting the ${lineLabel}${keys.anthropic ? ' via Claude — may take 20–40s…' : '…'}`, 'Pass 2 of 2');
     try {
       const r = await callRewriteAPI(keys, buildSurgicalPrompt(ctx, lyrics, weakLines), signal, retries, 0.75);
       rewrites = parseRewrites(r.text);
@@ -1567,7 +1568,7 @@ async function startGrade(mode) {
     }
   } else {
     const scopeDesc = targetSections ? `sections: ${targetSections.join(', ')}` : 'full song';
-    setStatus(`Rewriting ${scopeDesc} to 10/10…`, 'Pass 2 of 2');
+    setStatus(`Rewriting ${scopeDesc} to 10/10${keys.anthropic ? ' via Claude — may take 20–40s…' : '…'}`, 'Pass 2 of 2');
     try {
       const r = await callRewriteAPI(keys, buildFullRewritePrompt(ctx, lyrics, gradeResult, targetSections), signal, retries, 0.78);
       fullSong = parseFullRewrite(r.text);
@@ -2011,7 +2012,7 @@ function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
   const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
 
-  // Auto-repaired indicator (v3.6) — shown when auto-repair ran on this pair
+  // Auto-repaired indicator (v3.7) — shown when auto-repair ran on this pair
   const repairedTag = r.auto_repaired
     ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>`
     : '';
@@ -2026,22 +2027,22 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
     : '';
 
-  // Adjacency violation warning — may be model-reported or client-detected (v3.6)
+  // Adjacency violation warning — may be model-reported or client-detected (v3.7)
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v3.6)
+  // Verbatim duplication warning (v3.7)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Synonym-swap warning (v3.6) — quality flag, shown in amber not red
+  // Synonym-swap warning (v3.7) — quality flag, shown in amber not red
   const synWarning = (!r.synonym_clear && r.synonym_violation)
     ? `<div class="syn-swap-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate for a genuinely different image</div>`
     : '';
 
-  // Syllable delta badge — v3.6: always computed from actual text strings,
+  // Syllable delta badge — v3.7: always computed from actual text strings,
   // independent of model's claimed counts. Red = client counter says > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
