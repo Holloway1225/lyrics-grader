@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.4</title>
+<title>Lyrics Grader v3.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -75,8 +75,8 @@ main { max-width: 860px; margin: 0 auto; padding: 32px 20px 100px; }
 .keys-panel summary:hover { color: var(--text-2); }
 .keys-panel summary .chevron { margin-left: auto; font-size: 0.7rem; transition: transform 0.2s; }
 .keys-panel[open] summary .chevron { transform: rotate(180deg); }
-.keys-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px; background: var(--surface-2); border-top: 1px solid var(--border); }
-@media (max-width: 500px) { .keys-inner { grid-template-columns: 1fr; } }
+.keys-inner { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; padding: 18px; background: var(--surface-2); border-top: 1px solid var(--border); }
+@media (max-width: 600px) { .keys-inner { grid-template-columns: 1fr; } }
 
 /* Card / Fields */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 26px; margin-bottom: 16px; box-shadow: var(--shadow); }
@@ -423,7 +423,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.4</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.5</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -435,8 +435,12 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
       <summary><span>API Keys</span><span class="chevron">▾</span></summary>
       <div class="keys-inner">
         <div class="field">
-          <label>Groq API Key</label>
+          <label>Groq API Key <span class="sub">— grading</span></label>
           <input type="password" id="groqKey" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label>Anthropic API Key <span class="sub">— rewrites (recommended)</span></label>
+          <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
         </div>
         <div class="field">
           <label>Gemini API Key <span class="sub">— fallback</span></label>
@@ -629,7 +633,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v3.4 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.5 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -639,6 +643,9 @@ const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
 // Fix #12: model string and display name now match
 const GEMINI_MODEL      = 'gemini-2.0-flash';
 const GEMINI_MODEL_LABEL = 'Gemini 2.0 Flash';
+// v3.5: Claude Sonnet as primary rewriter when Anthropic key is present
+const CLAUDE_REWRITE_MODEL       = 'claude-sonnet-4-6';
+const CLAUDE_REWRITE_MODEL_LABEL = 'Claude Sonnet 4.6';
 const TIMEOUT_MS   = 52000;
 const RETRY_DELAY  = 1400;
 // Fix #11: cap session history to avoid sessionStorage overflow
@@ -649,7 +656,7 @@ const MAX_HISTORY  = 20;
 // ─────────────────────────────────────────────────────────────────────────────
 let controller = null;
 let appState = {
-  gradeResult: null, usedModel: null, rewrites: [], fullSong: '', mode: 'surgical',
+  gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical',
   ctx: '', lyrics: '', acceptedRewrites: {},
   gradeHistory: [],
   parsedSections: [], selectedSections: []
@@ -734,13 +741,15 @@ $('allSectionsChip').addEventListener('click', toggleSectionAll);
 // Init persisted keys
 (function initKeys() {
   try {
-    const gk = localStorage.getItem('lg_groq'), mk = localStorage.getItem('lg_gemini');
+    const gk = localStorage.getItem('lg_groq'), mk = localStorage.getItem('lg_gemini'), ak = localStorage.getItem('lg_anthropic');
     if (gk) $('groqKey').value = gk;
     if (mk) $('geminiKey').value = mk;
+    if (ak) $('anthropicKey').value = ak;
   } catch(_) {}
 })();
-$('groqKey').addEventListener('input',   e => { try { localStorage.setItem('lg_groq',   e.target.value); } catch(_){} });
-$('geminiKey').addEventListener('input', e => { try { localStorage.setItem('lg_gemini', e.target.value); } catch(_){} });
+$('groqKey').addEventListener('input',       e => { try { localStorage.setItem('lg_groq',       e.target.value); } catch(_){} });
+$('geminiKey').addEventListener('input',     e => { try { localStorage.setItem('lg_gemini',     e.target.value); } catch(_){} });
+$('anthropicKey').addEventListener('input',  e => { try { localStorage.setItem('lg_anthropic',  e.target.value); } catch(_){} });
 
 // Init session history
 (function initHistory() {
@@ -996,6 +1005,65 @@ async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
   throw new Error(errors[errors.length - 1] || 'No API available', { cause: errors.join(' | ') });
 }
 
+// v3.5: Claude Sonnet via Anthropic API — primary rewriter
+async function callClaude(key, prompt, signal, retries, temp) {
+  const res = await fetchRetry(
+    'https://api.anthropic.com/v1/messages',
+    { method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: CLAUDE_REWRITE_MODEL,
+        max_tokens: 4000,
+        temperature: temp,
+        messages: [{ role: 'user', content: prompt }]
+      }) },
+    signal, retries
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw Object.assign(
+      new Error(err?.error?.message || `Anthropic ${res.status}`),
+      { status: res.status }
+    );
+  }
+  const data = await res.json();
+  const text = data.content
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join('');
+  return { text, model: CLAUDE_REWRITE_MODEL_LABEL };
+}
+
+// v3.5: Rewrite-specific API router.
+// Prefers Claude Sonnet (best instruction-following for complex constraints).
+// Falls back to Groq then Gemini if Anthropic key absent or fails.
+async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
+  const errors = [];
+  if (keys.anthropic) {
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    try { return await callClaude(keys.anthropic, prompt, signal, retries, temp); }
+    catch(e) {
+      if (e.name === 'AbortError') throw e;
+      errors.push(`Claude: ${e.message}`);
+      if (e.status === 401 || e.status === 403) {
+        // Bad key — don't fall through silently, surface it
+        throw new Error(`Anthropic key error: ${e.message}`);
+      }
+    }
+  }
+  // Fallback to Groq + Gemini
+  try { return await callAPI(keys, prompt, signal, retries, temp); }
+  catch(e) {
+    if (e.name === 'AbortError') throw e;
+    errors.push(e.message);
+  }
+  throw new Error(errors[errors.length - 1] || 'No rewrite API available', { cause: errors.join(' | ') });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Parsers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1018,7 +1086,7 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
 
-  // v3.4: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
+  // v3.5: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
   // The model's breakdown integers are treated as scaffolding only; they are often
   // fabricated to support a false PASS claim. We count independently from the
   // actual before/after strings and override the model's verdict when they conflict.
@@ -1053,7 +1121,7 @@ function parseRewrites(text) {
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
-      // Synonym-swap check (v3.4)
+      // Synonym-swap check (v3.5)
       const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim() : '';
       const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '';
 
@@ -1061,7 +1129,7 @@ function parseRewrites(text) {
       // for badge rendering (it's still in the JSON but we don't trust it)
       const sylPassEffective = delta === null || Math.abs(delta) <= 1;
 
-      // Client-side adjacency check (v3.4): parse Step B words from adjacency_check
+      // Client-side adjacency check (v3.5): parse Step B words from adjacency_check
       // field and test them against the actual after string. Catches cases where the
       // model falsely asserts CLEAR without checking its candidate.
       const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
@@ -1445,8 +1513,8 @@ async function startGrade(mode) {
   const ctxRaw    = $('context').value.trim();
   if (!lyricsRaw)            return showError('Please paste your lyrics first.');
   if (lyricsRaw.length < 20) return showError('Lyrics look too short — paste the full text.');
-  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim() };
-  if (!keys.groq && !keys.gemini) return showError('Add at least one API key in the panel above.');
+  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
+  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('Add at least one API key in the panel above.');
 
   const retries   = parseInt($('retryCount').value, 10) || 0;
   const lineCount = $('lineCount').value;
@@ -1480,6 +1548,7 @@ async function startGrade(mode) {
   // Pass 2: Rewrite
   let rewrites = [], fullSong = '';
   let pass2Failed = false, pass2Error = '';
+  let rewriteModel = null;
 
   if (mode === 'surgical') {
     const maxLines  = lineCount === 'all' ? gradeResult.weak_lines.length : parseInt(lineCount, 10);
@@ -1487,8 +1556,9 @@ async function startGrade(mode) {
     const lineLabel = weakLines.length === 1 ? '1 line' : `${weakLines.length} lines`;
     setStatus(`Rewriting the ${lineLabel}…`, 'Pass 2 of 2');
     try {
-      const r = await callAPI(keys, buildSurgicalPrompt(ctx, lyrics, weakLines), signal, retries, 0.75);
+      const r = await callRewriteAPI(keys, buildSurgicalPrompt(ctx, lyrics, weakLines), signal, retries, 0.75);
       rewrites = parseRewrites(r.text);
+      rewriteModel = r.model;
     } catch(e) {
       if (e.name === 'AbortError') { controller = null; setBusy(false); return; }
       pass2Failed = true; pass2Error = e.message;
@@ -1498,8 +1568,9 @@ async function startGrade(mode) {
     const scopeDesc = targetSections ? `sections: ${targetSections.join(', ')}` : 'full song';
     setStatus(`Rewriting ${scopeDesc} to 10/10…`, 'Pass 2 of 2');
     try {
-      const r = await callAPI(keys, buildFullRewritePrompt(ctx, lyrics, gradeResult, targetSections), signal, retries, 0.78);
+      const r = await callRewriteAPI(keys, buildFullRewritePrompt(ctx, lyrics, gradeResult, targetSections), signal, retries, 0.78);
       fullSong = parseFullRewrite(r.text);
+      rewriteModel = r.model;
     } catch(e) {
       if (e.name === 'AbortError') { controller = null; setBusy(false); return; }
       pass2Failed = true; pass2Error = e.message;
@@ -1517,7 +1588,7 @@ async function startGrade(mode) {
 
   appState = {
     ...appState,
-    gradeResult, usedModel, rewrites, fullSong, mode, ctx, lyrics,
+    gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, ctx, lyrics,
     acceptedRewrites: {},
     gradeHistory: prevHistory,
     pass2Failed, pass2Error,
@@ -1530,7 +1601,7 @@ async function startGrade(mode) {
     showPartialNotice(`Grade complete — rewrite step failed: ${pass2Error}. Your grade is shown below. Try again to get rewrites.`);
   }
 
-  renderResults(gradeResult, usedModel, rewrites, fullSong, mode, prevHistory, targetSections);
+  renderResults(gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, prevHistory, targetSections);
   showPhase('phaseResults');
 
   // Auto-repair any rewrites that failed client-side validation (syllable mismatch
@@ -1548,8 +1619,8 @@ async function regenLine(idx) {
   const line = appState.rewrites[idx]?.before || gradeResult.weak_lines[idx];
   if (!line) return;
 
-  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim() };
-  if (!keys.groq && !keys.gemini) return showError('API key required to regenerate.');
+  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
+  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('API key required to regenerate.');
 
   const retries = parseInt($('retryCount').value, 10) || 0;
   clearError();
@@ -1564,13 +1635,13 @@ async function regenLine(idx) {
   setStatus(`Regenerating line ${idx + 1}…`);
 
   try {
-    const r = await callAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.82);
+    const r = await callRewriteAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.82);
     let result;
     try {
       result = parseRewrites(r.text);
     } catch(_) {
       // Parse failed — retry once at lower temperature
-      const r2 = await callAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.6);
+      const r2 = await callRewriteAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.6);
       try {
         result = parseRewrites(r2.text);
       } catch(parseErr) {
@@ -1608,7 +1679,7 @@ async function autoRepairRewrites() {
 
   if (!toRepair.length) return;
 
-  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim() };
+  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
   if (!keys.groq && !keys.gemini) return;
 
   const retries = parseInt($('retryCount').value, 10) || 0;
@@ -1625,7 +1696,7 @@ async function autoRepairRewrites() {
     const { signal } = controller;
 
     try {
-      const resp = await callAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, line), signal, retries, 0.82);
+      const resp = await callRewriteAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, line), signal, retries, 0.82);
       const result = parseRewrites(resp.text);
       if (result[0] && result[0].after && result[0].after.trim()) {
         // Mark as auto-repaired so the pair can show an indicator
@@ -1795,13 +1866,17 @@ function renderDeltaBanner(history) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Render results
 // ─────────────────────────────────────────────────────────────────────────────
-function renderResults(grade, modelName, rewrites, fullSong, mode, history, targetSections) {
+function renderResults(grade, modelName, rewriteModelName, rewrites, fullSong, mode, history, targetSections) {
   renderDeltaBanner(history);
   renderHistory(history);
   clearPartialNotice();
 
   $('overallNum').textContent = grade.overall;
-  $('modelTag').textContent   = `via ${modelName}`;
+  // Show grade model; if rewrite used a different model, show that too
+  const rewriteTag = rewriteModelName && rewriteModelName !== modelName
+    ? ` · rewrites via ${rewriteModelName}`
+    : '';
+  $('modelTag').textContent = `graded via ${modelName}${rewriteTag}`;
 
   const overallDeltaEl = $('overallDelta');
   if (history.length >= 2) {
@@ -1935,7 +2010,7 @@ function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
   const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
 
-  // Auto-repaired indicator (v3.4) — shown when auto-repair ran on this pair
+  // Auto-repaired indicator (v3.5) — shown when auto-repair ran on this pair
   const repairedTag = r.auto_repaired
     ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>`
     : '';
@@ -1950,22 +2025,22 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
     : '';
 
-  // Adjacency violation warning — may be model-reported or client-detected (v3.4)
+  // Adjacency violation warning — may be model-reported or client-detected (v3.5)
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v3.4)
+  // Verbatim duplication warning (v3.5)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Synonym-swap warning (v3.4) — quality flag, shown in amber not red
+  // Synonym-swap warning (v3.5) — quality flag, shown in amber not red
   const synWarning = (!r.synonym_clear && r.synonym_violation)
     ? `<div class="syn-swap-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate for a genuinely different image</div>`
     : '';
 
-  // Syllable delta badge — v3.4: always computed from actual text strings,
+  // Syllable delta badge — v3.5: always computed from actual text strings,
   // independent of model's claimed counts. Red = client counter says > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
@@ -2078,7 +2153,7 @@ function resetAll() {
   const savedCtx     = $('context').value;
   const savedHistory = appState.gradeHistory;
   appState = {
-    gradeResult: null, usedModel: null, rewrites: [], fullSong: '', mode: 'surgical',
+    gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical',
     ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: savedHistory,
     parsedSections: [], selectedSections: []
   };
