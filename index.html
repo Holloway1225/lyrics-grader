@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.7</title>
+<title>Lyrics Grader v3.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -423,7 +423,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.7</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.8</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -633,7 +633,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v3.7 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.8 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -643,7 +643,7 @@ const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
 // Fix #12: model string and display name now match
 const GEMINI_MODEL      = 'gemini-2.0-flash';
 const GEMINI_MODEL_LABEL = 'Gemini 2.0 Flash';
-// v3.7: Claude Sonnet as primary rewriter when Anthropic key is present
+// v3.8: Claude Sonnet as primary rewriter when Anthropic key is present
 const CLAUDE_REWRITE_MODEL       = 'claude-sonnet-4-6';
 const CLAUDE_REWRITE_MODEL_LABEL = 'Claude Sonnet 4.6';
 const TIMEOUT_MS        = 52000;   // grade pass (Groq — fast)
@@ -1006,7 +1006,7 @@ async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
   throw new Error(errors[errors.length - 1] || 'No API available', { cause: errors.join(' | ') });
 }
 
-// v3.7: Claude Sonnet via Anthropic API — primary rewriter
+// v3.8: Claude Sonnet via Anthropic API — primary rewriter
 async function callClaude(key, prompt, signal, retries, temp) {
   const res = await fetchRetry(
     'https://api.anthropic.com/v1/messages',
@@ -1040,7 +1040,7 @@ async function callClaude(key, prompt, signal, retries, temp) {
   return { text, model: CLAUDE_REWRITE_MODEL_LABEL };
 }
 
-// v3.7: Rewrite-specific API router.
+// v3.8: Rewrite-specific API router.
 // Prefers Claude Sonnet (best instruction-following for complex constraints).
 // Falls back to Groq then Gemini if Anthropic key absent or fails.
 async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
@@ -1088,7 +1088,7 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
 
-  // v3.7: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
+  // v3.8: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
   // The model's breakdown integers are treated as scaffolding only; they are often
   // fabricated to support a false PASS claim. We count independently from the
   // actual before/after strings and override the model's verdict when they conflict.
@@ -1123,15 +1123,19 @@ function parseRewrites(text) {
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
-      // Synonym-swap check (v3.7)
-      const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim() : '';
-      const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '';
+      // Synonym/domain check — v3.8 prompt uses domain_shift field instead of synonym_check
+      // Accept either field; treat domain_shift presence as CLEAR (it means model shifted domains)
+      const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim()
+                     : typeof r.domain_shift  === 'string' ? '' // domain_shift = already shifted, no warning needed
+                     : '';
+      const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '' ||
+                       (typeof r.domain_shift === 'string' && r.domain_shift.trim() !== '');
 
       // Pass/fail purely from our counter — model's syllable_violations field ignored
       // for badge rendering (it's still in the JSON but we don't trust it)
       const sylPassEffective = delta === null || Math.abs(delta) <= 1;
 
-      // Client-side adjacency check (v3.7): parse Step B words from adjacency_check
+      // Client-side adjacency check (v3.8): parse Step B words from adjacency_check
       // field and test them against the actual after string. Catches cases where the
       // model falsely asserts CLEAR without checking its candidate.
       const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
@@ -1292,78 +1296,21 @@ Respond ONLY with valid JSON, no markdown:
 
 function buildSurgicalPrompt(ctx, lyrics, weakLines) {
   const linesList = weakLines.map((l, i) => `${i+1}. "${l}"`).join('\n');
-  return `You are a professional master songwriter and lyric editor. Your craft is surgical. You construct emotion — you do not perform it.
+  return `You are a master songwriter and lyric editor. Rewrite weak lines to elite level.
 
-A line reaches elite level only when ALL SEVEN fire:
-1. EMOTIONAL SPECIFICITY — hyper-specific, lived-in detail. Not generic feeling.
-2. IMAGERY — cinematic, tangible. The listener sees a scene.
-3. CONCEPT FIT — serves the song's central idea. No orphan lines.
-4. COMPRESSION & SUBTEXT — every word earns its place. Layers that expand on reread.
-5. PROSODY & FLOW — stressed syllables land on emotional beats. Natural to sing.
-6. ORIGINALITY & AUTHENTICITY — feels lived-in, not assembled. Would you steal this line?
-7. MEMORABILITY — stops you. Still audible after you stop reading.
+Before writing any rewrite, read the full song and build an imagery catalogue — every concrete noun and physical action verb, with its section. This is your only allowed word pool for content words.
 
-PREPARATION — complete once before any rewrite:
+For each weak line, produce a rewrite that:
+1. Stays within ±1 syllable of the original (count carefully)
+2. Uses only words from the imagery catalogue — no imported metaphors
+3. Shares no word, root word, or image with the line immediately before or after it in the song
+4. Does not appear verbatim anywhere else in the song
+5. Moves to a different image domain than the original (machinery→fire, weather→signal etc) — not a synonym swap
+6. Performs the same structural role as the original (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF)
+7. Contains no abstract emotional statements — only the physical event that produces the feeling
+8. Is the only line that could exist here, not just a different line
 
-STEP 0 — BUILD THE IMAGERY CATALOGUE
-Read the full song. List every concrete noun and physical action verb with its section. Format: "word (section)". This is your ONLY allowed word pool. Any content word absent from this list is a forbidden import.
-
-NON-NEGOTIABLE RULES:
-
-RULE 0 — SYNONYM-SWAP PRE-CHECK (run before writing any candidate)
-For each weak line, list its IMAGE DOMAIN (what physical world it belongs to: machinery, weather, architecture, signal/frequency, fire, water, etc.) and its KEY NOUNS AND VERBS.
-A synonym swap is: replacing the key words with synonyms while staying in the SAME IMAGE DOMAIN.
-A legitimate rewrite moves to a DIFFERENT IMAGE DOMAIN from the catalogue, or finds a different specific event within the domain that operates at a more concrete level.
-
-Forbidden (same domain, different words):
-  - "built their walls [architecture]" → "constructed their barriers [architecture]" = SWAP
-  - "turned your future into ash [fire]" → "reduced your path to rubble [destruction]" = SWAP
-  - "planned the fall [planning]" → "designed the end [planning]" = SWAP
-
-Legitimate (different domain, same emotional job):
-  - "built their walls [architecture]" → "cast the net, the traps were laid [hunting/entrapment]" = CLEAR
-  - "they sent their floods [weather]" → "they greased their gears to bear down [machinery]" = CLEAR
-
-Write synonym_check: "CLEAR — domain shift from [original domain] to [new domain]" or "SWAP:[original concept and domain] — find a different domain".
-
-RULE 1 — STRUCTURAL ROLE
-Every line has one job: TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF.
-Name it. Your "why" must prove the rewrite performs that same job.
-
-RULE 2 — SYLLABLE GATE (retry loop — empty "after" is never acceptable)
-Count syllables word by word. Show breakdown for original and candidate rewrite.
-Example: "For(1)-good(1)-ness(1)-gra(1)-cious(1)-for(1)-good(1)-ness(1)-sake(1)" = 9.
-Write syllable_violations: "PASS" (within ±1) or "FAIL: original N, rewrite M".
-IF FAIL: generate a new candidate and recount. Show new breakdown in syllable_count_rewrite.
-Keep iterating until PASS. You must reach PASS before writing "after". Blank "after" is forbidden.
-
-RULE 3 — ADJACENCY GATE (retry loop — empty "after" is never acceptable)
-STEP A: Quote the line immediately before and the line immediately after the target verbatim.
-STEP B: List every word, root word, verb class (trap/snare/catch = entrapment), and image in those neighbours.
-STEP C: Write your candidate rewrite here first. Then check: does this candidate contain ANY word, root, verb-class synonym, or image from STEP B? VIOLATION = discard candidate, generate a new one, return to STEP C. CLEAR = this candidate becomes your "after".
-CRITICAL: The candidate you declare CLEAR in STEP C must be copied verbatim into the "after" field. If you change the wording between STEP C and "after", the adjacency check is invalidated. The "after" field must be identical to the STEP C candidate.
-World anchor must be NON-ADJACENT.
-
-RULE 4 — VERBATIM DUPLICATION CHECK
-Before writing "after", confirm the rewrite does not exist verbatim anywhere else in the song.
-Write verbatim_check: "CLEAR" or "DUPLICATE:[matching line]".
-If DUPLICATE, generate a new candidate.
-
-RULE 5 — CATALOGUE CHECK
-Every content word in the rewrite must appear in imagery_catalogue.
-Write catalogue_check listing each content word and whether it appears (yes/no).
-Any content word that is "no" = forbidden import = generate new candidate.
-
-RULE 6 — NO ABSTRACT EMOTIONAL STATEMENTS
-Never name a feeling. Replace every abstraction with the physical event that produces it.
-
-RULE 7 — WHY: LINE-SPECIFIC MECHANISM
-Structure: "[specific word/phrase] replaces [exact original words] because [what the listener now specifically pictures/hears that they did not before, and why this exact word produces that] — maintaining the [ROLE] function by [how]."
-The why must reference the specific words of THIS line. A why statement reusable across different lines is a generic assertion and fails.
-Effect-only = FAIL. Source-only = FAIL. Recycled/generic = FAIL.
-
-RULE 8 — INEVITABILITY TEST
-Is this the only line that could exist here? If just different — new candidate.
+The "why" must name the exact word substituted, what it replaced, and what the listener now specifically pictures that they didn't before. Generic quality claims ("more vivid", "hits harder") are not acceptable.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1375,24 +1322,21 @@ ${lyrics}
 Weak lines to rewrite:
 ${linesList}
 
-Respond ONLY with valid JSON, no markdown. Every "after" MUST be non-empty. Iterate on candidates internally until both gates pass before submitting:
+Respond ONLY with valid JSON, no markdown:
 {
   "imagery_catalogue": ["<word (section)>"],
   "rewrites": [
     {
       "before": "<original line verbatim>",
-      "synonym_check": "<CLEAR — or SWAP:[original concept] if this is a synonym swap, then find a different image>",
       "structural_role": "<ROLE TYPE> — <one sentence why>",
-      "syllable_count_original": "<word(N)-word(N)... -> total: N>",
-      "syllable_count_rewrite": "<word(N)-word(N)... -> total: N — updated if prior candidates failed>",
-      "syllable_violations": "PASS",
-      "adjacency_check": "<STEP A: line before | line after> — <STEP B: neighbour words/roots/classes/images> — <STEP C: candidate='[your rewrite here]' CLEAR or VIOLATION:[item]>",
+      "syllable_check": "<original count> → <rewrite count> — PASS or FAIL",
+      "adjacency_check": "<line before> | <line after> — CLEAR or VIOLATION:[word]",
       "adjacency_violations": "CLEAR",
-      "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
-      "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
-      "catalogue_check": "<content word -> in catalogue: yes/no for each>",
-      "after": "<non-empty passing candidate that cleared synonym_check, syllable gate, adjacency gate, verbatim check, and catalogue check>",
-      "why": "<'[specific word/phrase] replaces [exact original] because [line-specific perceptual mechanism] — maintaining [ROLE] by [how]'>"
+      "verbatim_check": "CLEAR",
+      "domain_shift": "<original domain> → <new domain>",
+      "catalogue_check": "<each content word: in catalogue yes/no>",
+      "after": "<rewrite>",
+      "why": "<'[word] replaces [original] because [specific perceptual change] — maintaining [ROLE] by [how]'>"
     }
   ]
 }`;
@@ -1400,35 +1344,21 @@ Respond ONLY with valid JSON, no markdown. Every "after" MUST be non-empty. Iter
 
 
 function buildSingleRegenPrompt(ctx, lyrics, line) {
-  return `You are a professional master songwriter. Rewrite ONE weak line to elite level.
+  return `You are a master songwriter. Rewrite one weak line to elite level.
 
-PREPARATION: Build the imagery catalogue first.
-Read the full song. List every concrete noun and physical action verb with its section. This is your ONLY allowed word pool.
+Read the full song first. Build an imagery catalogue (every concrete noun and physical action verb, with section). That is your only allowed word pool.
 
-NON-NEGOTIABLE RULES:
+The rewrite must:
+1. Stay within ±1 syllable of the original
+2. Use only catalogue words — no imports
+3. Share no word, root, or image with the immediately adjacent lines
+4. Not appear verbatim elsewhere in the song
+5. Move to a different image domain than the original
+6. Perform the same structural role (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF)
+7. Replace abstraction with physical event
+8. Be the only line that could exist here
 
-RULE 0 — SYNONYM-SWAP PRE-CHECK: Identify the IMAGE DOMAIN of the original (machinery, weather, architecture, signal, fire, water, etc.) and its key nouns/verbs. A swap = replacing with synonyms in the SAME domain. A legitimate rewrite moves to a DIFFERENT domain from the catalogue. "floods [weather]" → "gears [machinery]" = CLEAR. "walls [architecture]" → "barriers [architecture]" = SWAP. Write synonym_check: "CLEAR — domain shift from [X] to [Y]" or "SWAP:[concept and domain]".
-
-RULE 1 — STRUCTURAL ROLE: name the job (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF). Your "why" must prove the rewrite performs that same job.
-
-RULE 2 — SYLLABLE GATE (retry loop): Show word-by-word breakdown. Write syllable_violations: PASS (within ±1) or FAIL: original N, rewrite M. If FAIL, generate new candidate and recount. Repeat until PASS. Blank "after" is forbidden.
-
-RULE 3 — ADJACENCY GATE (retry loop):
-STEP A: Quote line before and after verbatim.
-STEP B: List every word, root, verb class, and image in those neighbours.
-STEP C: Write your candidate rewrite here. Check: does it contain ANY word, root, verb-class synonym, or image from STEP B? VIOLATION = new candidate, repeat STEP C. CLEAR = this candidate becomes "after".
-CRITICAL: The candidate declared CLEAR in STEP C must be copied verbatim into "after". Any change between STEP C and "after" invalidates the check.
-World anchor must be NON-ADJACENT.
-
-RULE 4 — VERBATIM CHECK: Confirm rewrite does not appear verbatim elsewhere in the song. CLEAR or DUPLICATE:[line]. If DUPLICATE, new candidate.
-
-RULE 5 — CATALOGUE CHECK: Every content word must appear in imagery_catalogue. List each (yes/no). Any "no" = new candidate.
-
-RULE 6 — NO ABSTRACT EMOTIONAL STATEMENTS: Physical event only.
-
-RULE 7 — WHY: LINE-SPECIFIC MECHANISM: "[specific word/phrase] replaces [exact original] because [what listener now specifically pictures/hears and why this exact word produces it] — maintaining [ROLE] by [how]." Must reference this line's specific words. Generic/recycled why = FAIL.
-
-RULE 8 — INEVITABILITY TEST: Only line that could exist here, or just different? If different — new candidate.
+The "why" must name the exact substitution and what the listener now pictures. No generic quality claims.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1439,20 +1369,21 @@ ${lyrics}
 
 Line to rewrite: "${line}"
 
-Respond ONLY with valid JSON, no markdown. "after" MUST be non-empty:
+Respond ONLY with valid JSON, no markdown:
 {
   "imagery_catalogue": ["<word (section)>"],
   "rewrites": [
     {
       "before": "<original line verbatim>",
-      "synonym_check": "<CLEAR — or SWAP:[concept], then find a different image>",
-      "structural_role": "<ROLE TYPE> — <one sentence why>",
+      "structural_role": "<ROLE TYPE> — <why>",
+      "syllable_check": "<original N> → <rewrite N> — PASS or FAIL",
+      "adjacency_check": "<line before> | <line after> — CLEAR or VIOLATION:[word]",
       "adjacency_violations": "CLEAR",
-      "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
-      "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
-      "catalogue_check": "<content word -> in catalogue: yes/no>",
-      "after": "<non-empty passing candidate>",
-      "why": "<'[specific word/phrase] replaces [exact original] because [line-specific mechanism] — maintaining [ROLE] by [how]'>"
+      "verbatim_check": "CLEAR",
+      "domain_shift": "<original domain> → <new domain>",
+      "catalogue_check": "<content word: yes/no each>",
+      "after": "<rewrite>",
+      "why": "<'[word] replaces [original] because [specific perceptual change] — maintaining [ROLE] by [how]'>"
     }
   ]
 }`;
@@ -2012,7 +1943,7 @@ function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
   const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
 
-  // Auto-repaired indicator (v3.7) — shown when auto-repair ran on this pair
+  // Auto-repaired indicator (v3.8) — shown when auto-repair ran on this pair
   const repairedTag = r.auto_repaired
     ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>`
     : '';
@@ -2027,22 +1958,22 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
     : '';
 
-  // Adjacency violation warning — may be model-reported or client-detected (v3.7)
+  // Adjacency violation warning — may be model-reported or client-detected (v3.8)
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v3.7)
+  // Verbatim duplication warning (v3.8)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Synonym-swap warning (v3.7) — quality flag, shown in amber not red
+  // Synonym-swap warning (v3.8) — quality flag, shown in amber not red
   const synWarning = (!r.synonym_clear && r.synonym_violation)
     ? `<div class="syn-swap-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate for a genuinely different image</div>`
     : '';
 
-  // Syllable delta badge — v3.7: always computed from actual text strings,
+  // Syllable delta badge — v3.8: always computed from actual text strings,
   // independent of model's claimed counts. Red = client counter says > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
