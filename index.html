@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.0</title>
+<title>Lyrics Grader v3.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -421,7 +421,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.0</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.1</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -626,7 +626,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v3.0 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.1 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1014,62 +1014,72 @@ function parseRewrites(text) {
   // Fix #3: use robust extraction
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
-  // Fix #2: validate each item has required fields.
-  // syllable_violations: "PASS" or "FAIL:..." (gate from v2.8)
-  // adjacency_violations: "CLEAR" or violation (gate from v2.7)
-  // verbatim_check: "CLEAR" or "DUPLICATE:[line]" (gate from v3.0)
 
-  // Syllable counting fallback (v3.0): when the model's breakdown string isn't
-  // parseable, count syllables directly from the text strings so the badge
-  // never silently goes dark.
-  function countSyllablesFallback(str) {
+  // v3.1: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
+  // The model's breakdown integers are treated as scaffolding only; they are often
+  // fabricated to support a false PASS claim. We count independently from the
+  // actual before/after strings and override the model's verdict when they conflict.
+  function countSyllables(str) {
     if (!str || typeof str !== 'string') return null;
-    // Simple English syllable estimator: count vowel groups, handle silent-e,
-    // floor at 1 per word. Good enough to catch ±2+ misses.
-    return str.trim().split(/\s+/).reduce((total, word) => {
-      const w = word.toLowerCase().replace(/[^a-z]/g, '');
+    return str.trim().split(/\s+/).reduce((total, rawWord) => {
+      const w = rawWord.toLowerCase().replace(/[^a-z']/g, '').replace(/'/g, '');
       if (!w) return total;
-      let count = (w.match(/[aeiouy]+/g) || []).length;
-      if (w.endsWith('e') && count > 1) count--;
-      if (w.endsWith('le') && w.length > 2) count = Math.max(count, 1);
-      return total + Math.max(1, count);
+      // Greedy vowel group count
+      let n = (w.match(/[aeiouy]+/g) || []).length;
+      // Strip silent terminal -e (but not -le, -ee, -oe endings which are voiced)
+      if (w.length > 2 && w.endsWith('e') && !w.endsWith('le') && !w.endsWith('ee') && !w.endsWith('oe') && n > 1) n--;
+      // Common two-syllable suffixes often undercounted: -tion, -sion, -cion
+      if (/[ts]ion$/.test(w)) n = Math.max(n, 2);
+      // -ious, -eous, -ual, -iel get an extra count
+      if (/(ious|eous|ual|iel)$/.test(w)) n++;
+      return total + Math.max(1, n);
     }, 0);
-  }
-
-  function extractSylCount(val) {
-    if (typeof val === 'number') return val;
-    if (typeof val === 'string') {
-      // Try "→ total: N" or "-> total: N" or trailing integer
-      const m = val.match(/(?:total:\s*)?(\d+)\s*$/);
-      return m ? parseInt(m[1], 10) : null;
-    }
-    return null;
   }
 
   return d.rewrites
     .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
     .map(r => {
-      let orig = extractSylCount(r.syllable_count_original);
-      let rew  = extractSylCount(r.syllable_count_rewrite);
-
-      // Fallback: count directly from text if model breakdown wasn't parseable
-      if (orig === null) orig = countSyllablesFallback(r.before);
-      if (rew  === null) rew  = countSyllablesFallback(r.after);
+      // Count directly from actual text — independent of model's breakdown claim
+      const orig = countSyllables(r.before);
+      const rew  = countSyllables(r.after);
+      const delta = (orig !== null && rew !== null) ? rew - orig : null;
 
       const adjRaw   = typeof r.adjacency_violations === 'string' ? r.adjacency_violations.trim() : '';
       const adjClear = adjRaw.toUpperCase() === 'CLEAR' || adjRaw === '';
 
-      const sylRaw  = typeof r.syllable_violations === 'string' ? r.syllable_violations.trim() : '';
-      const sylPass = sylRaw.toUpperCase().startsWith('PASS') || sylRaw === '';
-
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
-      const delta = (orig !== null && rew !== null) ? rew - orig : null;
+      // Pass/fail purely from our counter — model's syllable_violations field ignored
+      // for badge rendering (it's still in the JSON but we don't trust it)
+      const sylPassEffective = delta === null || Math.abs(delta) <= 1;
 
-      // If model claimed PASS but our count shows |delta| > 1, downgrade to warn
-      // (doesn't override the gate — just flags it visually)
-      const sylPassEffective = sylPass && (delta === null || Math.abs(delta) <= 1);
+      // Client-side adjacency check (v3.1): parse Step B words from adjacency_check
+      // field and test them against the actual after string. Catches cases where the
+      // model falsely asserts CLEAR without checking its candidate.
+      const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
+      let clientAdjViolation = '';
+      if (adjClear && adjCheckRaw) {
+        // Extract Step B content: everything between "STEP B:" and "STEP C:"
+        const stepBMatch = adjCheckRaw.match(/STEP\s*B[:\s]+(.+?)(?:STEP\s*C|$)/is);
+        if (stepBMatch) {
+          const stepBWords = stepBMatch[1]
+            .toLowerCase()
+            .split(/[\s,;|/\-—–]+/)
+            .map(w => w.replace(/[^a-z]/g, ''))
+            .filter(w => w.length > 2); // skip short function words
+          const afterLower = r.after.toLowerCase();
+          const afterWords = afterLower.split(/\s+/).map(w => w.replace(/[^a-z]/g, ''));
+          for (const banned of stepBWords) {
+            if (afterWords.includes(banned)) {
+              clientAdjViolation = `"${banned}" found in rewrite but listed as neighbour word`;
+              break;
+            }
+          }
+        }
+      }
+
+      const finalAdjClear = adjClear && !clientAdjViolation;
 
       return {
         before:              r.before,
@@ -1077,10 +1087,10 @@ function parseRewrites(text) {
         world_anchor:        r.world_anchor    || '',
         why:                 r.why             || '',
         structural_role:     r.structural_role || '',
-        adjacency_clear:     adjClear,
-        adjacency_violation: adjClear ? '' : adjRaw,
+        adjacency_clear:     finalAdjClear,
+        adjacency_violation: finalAdjClear ? '' : (clientAdjViolation || adjRaw),
         syllable_pass:       sylPassEffective,
-        syllable_violation:  sylPassEffective ? '' : (sylRaw || `estimated original ${orig}, rewrite ${rew}`),
+        syllable_violation:  sylPassEffective ? '' : `client count: original ${orig}, rewrite ${rew}`,
         verbatim_clear:      vtClear,
         verbatim_violation:  vtClear ? '' : vtRaw,
         syllable_delta:      delta
@@ -1834,23 +1844,23 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>`
     : '';
 
-  // Syllable gate violation warning
+  // Syllable gate violation warning — driven by client counter, not model claim
   const sylWarning = (!r.syllable_pass && r.syllable_violation)
-    ? `<div class="adj-violation-warn">⚠ Syllable flag: ${esc(r.syllable_violation)} — verify cadence manually</div>`
+    ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
     : '';
 
-  // Adjacency violation warning
+  // Adjacency violation warning — may be model-reported or client-detected (v3.1)
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
-    ? `<div class="adj-violation-warn">⚠ Adjacency flag: ${esc(r.adjacency_violation)}</div>`
+    ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v3.0)
+  // Verbatim duplication warning (v3.1)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Syllable delta badge — v3.0: always shows (fallback counter fills gap when model
-  // breakdown wasn't parseable). Red = model or estimator flagged > ±1.
+  // Syllable delta badge — v3.1: always computed from actual text strings,
+  // independent of model's claimed counts. Red = client counter says > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
     const d    = r.syllable_delta;
@@ -1858,7 +1868,7 @@ function renderRewritePairInto(pair, idx, r) {
     const cls  = (!r.syllable_pass) ? 'syl-fail'
                : Math.abs(d) > 1    ? 'syl-warn'
                :                      'syl-ok';
-    const tip  = r.syllable_pass ? 'Syllable delta (estimated if no badge in prior versions)' : 'Syllable mismatch — verify cadence';
+    const tip  = r.syllable_pass ? 'Client syllable count (independent of model claim)' : 'Syllable mismatch — cadence likely broken';
     syllableBadge = `<span class="syllable-badge ${cls}" title="${tip}">${sign}${d} syl</span>`;
   }
 
