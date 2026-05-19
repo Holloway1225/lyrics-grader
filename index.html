@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.2</title>
+<title>Lyrics Grader v3.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -286,6 +286,7 @@ textarea { min-height: 220px; line-height: 1.85; font-size: 0.87rem; }
 .structural-role-label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); opacity: 0.6; flex-shrink: 0; font-style: normal; }
 .adj-violation-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--red-soft); border-left: 2px solid var(--red-line); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--red-text); margin-bottom: 10px; line-height: 1.5; }
 .syn-swap-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--gold-dim); border-left: 2px solid rgba(212,168,67,0.4); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--gold); margin-bottom: 10px; line-height: 1.5; }
+.auto-repaired-tag { display: inline-flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-text); background: var(--blue-soft); border: 1px solid var(--blue-line); padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; }
 
 /* Accepted buffer */
 .accepted-buffer { display: none; margin-top: 20px; }
@@ -422,7 +423,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.2</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.3</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -627,7 +628,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v3.2 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.3 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1016,7 +1017,7 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
 
-  // v3.2: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
+  // v3.3: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
   // The model's breakdown integers are treated as scaffolding only; they are often
   // fabricated to support a false PASS claim. We count independently from the
   // actual before/after strings and override the model's verdict when they conflict.
@@ -1051,7 +1052,7 @@ function parseRewrites(text) {
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
-      // Synonym-swap check (v3.2)
+      // Synonym-swap check (v3.3)
       const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim() : '';
       const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '';
 
@@ -1059,7 +1060,7 @@ function parseRewrites(text) {
       // for badge rendering (it's still in the JSON but we don't trust it)
       const sylPassEffective = delta === null || Math.abs(delta) <= 1;
 
-      // Client-side adjacency check (v3.2): parse Step B words from adjacency_check
+      // Client-side adjacency check (v3.3): parse Step B words from adjacency_check
       // field and test them against the actual after string. Catches cases where the
       // model falsely asserts CLEAR without checking its candidate.
       const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
@@ -1100,6 +1101,7 @@ function parseRewrites(text) {
         verbatim_violation:  vtClear ? '' : vtRaw,
         synonym_clear:       synClear,
         synonym_violation:   synClear ? '' : synRaw,
+        auto_repaired:       r.auto_repaired || false,
         syllable_delta:      delta
       };
     });
@@ -1238,13 +1240,20 @@ Read the full song. List every concrete noun and physical action verb with its s
 NON-NEGOTIABLE RULES:
 
 RULE 0 — SYNONYM-SWAP PRE-CHECK (run before writing any candidate)
-For each weak line, list the key nouns and verbs in the original. Then ask: is your rewrite replacing those words with synonyms or near-equivalents of the same abstraction level? If yes, it is a synonym swap and is forbidden.
-Examples of forbidden synonym swaps:
-  - "built their walls" → "constructed their barriers" (same image, different words)
-  - "turned your future into ash" → "reduced your path to rubble" (same image, different words)
-  - "planned the fall" → "designed the end" (same abstraction, different words)
-A legitimate rewrite finds a different concrete event from the imagery catalogue that does the same emotional work — not the same event with different vocabulary.
-Write synonym_check: "CLEAR" (genuinely different image) or "SWAP:[original concept]" (synonym swap — find a different image).
+For each weak line, list its IMAGE DOMAIN (what physical world it belongs to: machinery, weather, architecture, signal/frequency, fire, water, etc.) and its KEY NOUNS AND VERBS.
+A synonym swap is: replacing the key words with synonyms while staying in the SAME IMAGE DOMAIN.
+A legitimate rewrite moves to a DIFFERENT IMAGE DOMAIN from the catalogue, or finds a different specific event within the domain that operates at a more concrete level.
+
+Forbidden (same domain, different words):
+  - "built their walls [architecture]" → "constructed their barriers [architecture]" = SWAP
+  - "turned your future into ash [fire]" → "reduced your path to rubble [destruction]" = SWAP
+  - "planned the fall [planning]" → "designed the end [planning]" = SWAP
+
+Legitimate (different domain, same emotional job):
+  - "built their walls [architecture]" → "cast the net, the traps were laid [hunting/entrapment]" = CLEAR
+  - "they sent their floods [weather]" → "they greased their gears to bear down [machinery]" = CLEAR
+
+Write synonym_check: "CLEAR — domain shift from [original domain] to [new domain]" or "SWAP:[original concept and domain] — find a different domain".
 
 RULE 1 — STRUCTURAL ROLE
 Every line has one job: TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF.
@@ -1327,7 +1336,7 @@ Read the full song. List every concrete noun and physical action verb with its s
 
 NON-NEGOTIABLE RULES:
 
-RULE 0 — SYNONYM-SWAP PRE-CHECK: List the key nouns and verbs in the original line. Is your candidate replacing them with synonyms at the same abstraction level? ("built walls" → "constructed barriers" = swap. "built walls" → "cast the net" = different image.) If it's a swap, generate a different image from the catalogue. Write synonym_check: CLEAR or SWAP:[concept].
+RULE 0 — SYNONYM-SWAP PRE-CHECK: Identify the IMAGE DOMAIN of the original (machinery, weather, architecture, signal, fire, water, etc.) and its key nouns/verbs. A swap = replacing with synonyms in the SAME domain. A legitimate rewrite moves to a DIFFERENT domain from the catalogue. "floods [weather]" → "gears [machinery]" = CLEAR. "walls [architecture]" → "barriers [architecture]" = SWAP. Write synonym_check: "CLEAR — domain shift from [X] to [Y]" or "SWAP:[concept and domain]".
 
 RULE 1 — STRUCTURAL ROLE: name the job (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF). Your "why" must prove the rewrite performs that same job.
 
@@ -1603,6 +1612,7 @@ async function autoRepairRewrites() {
 
   const retries = parseInt($('retryCount').value, 10) || 0;
   const total   = toRepair.length;
+  let repaired  = 0, stillBroken = 0;
 
   for (let i = 0; i < toRepair.length; i++) {
     const { idx, r } = toRepair[i];
@@ -1617,20 +1627,30 @@ async function autoRepairRewrites() {
       const resp = await callAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, line), signal, retries, 0.82);
       const result = parseRewrites(resp.text);
       if (result[0] && result[0].after && result[0].after.trim()) {
+        // Mark as auto-repaired so the pair can show an indicator
+        result[0].auto_repaired = true;
         appState.rewrites[idx] = result[0];
         delete appState.acceptedRewrites[idx];
         renderRewritePair(idx, result[0]);
         updateAcceptedBuffer();
+        if (result[0].syllable_pass) repaired++;
+        else stillBroken++;
+      } else {
+        stillBroken++;
       }
     } catch(e) {
       if (e.name === 'AbortError') { controller = null; setStatus(''); return; }
-      // Silently skip — user can manually regenerate if auto-repair also fails
+      stillBroken++;
     } finally {
       controller = null;
     }
   }
 
   setStatus('');
+  // Brief summary notice after repair pass
+  if (stillBroken > 0) {
+    showPartialNotice(`Auto-repair: ${repaired} rewrite${repaired !== 1 ? 's' : ''} fixed, ${stillBroken} still broken — regenerate manually.`);
+  }
 }
 function acceptRewrite(idx) {
   const r = appState.rewrites[idx];
@@ -1904,6 +1924,11 @@ function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
   const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
 
+  // Auto-repaired indicator (v3.3) — shown when auto-repair ran on this pair
+  const repairedTag = r.auto_repaired
+    ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>`
+    : '';
+
   // Structural role — shown so user can verify model understood the line's job
   const roleTag = r.structural_role
     ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>`
@@ -1914,22 +1939,22 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
     : '';
 
-  // Adjacency violation warning — may be model-reported or client-detected (v3.2)
+  // Adjacency violation warning — may be model-reported or client-detected (v3.3)
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v3.2)
+  // Verbatim duplication warning (v3.3)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Synonym-swap warning (v3.2) — quality flag, shown in amber not red
+  // Synonym-swap warning (v3.3) — quality flag, shown in amber not red
   const synWarning = (!r.synonym_clear && r.synonym_violation)
     ? `<div class="syn-swap-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate for a genuinely different image</div>`
     : '';
 
-  // Syllable delta badge — v3.2: always computed from actual text strings,
+  // Syllable delta badge — v3.3: always computed from actual text strings,
   // independent of model's claimed counts. Red = client counter says > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
@@ -1943,6 +1968,7 @@ function renderRewritePairInto(pair, idx, r) {
   }
 
   pair.innerHTML = `
+    ${repairedTag}
     ${anchor}
     ${roleTag}
     ${sylWarning}
