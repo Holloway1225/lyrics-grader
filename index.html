@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v2.8</title>
+<title>Lyrics Grader v2.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -421,7 +421,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.8</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.9</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -626,7 +626,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v2.8 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v2.9 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1015,9 +1015,9 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
   // Fix #2: validate each item has required fields.
-  // syllable_count_* are now breakdown strings — extract trailing integer.
-  // syllable_violations: "PASS" or "FAIL: original N, rewrite M" (gate field from v2.8)
-  // adjacency_violations: "CLEAR" or violation description (gate field from v2.8)
+  // syllable_violations: "PASS" or "FAIL:..." (gate from v2.9)
+  // adjacency_violations: "CLEAR" or violation (gate from v2.7)
+  // verbatim_check: "CLEAR" or "DUPLICATE:[line]" (gate from v2.9)
   return d.rewrites
     .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
     .map(r => {
@@ -1032,13 +1032,15 @@ function parseRewrites(text) {
       const orig = extractSylCount(r.syllable_count_original);
       const rew  = extractSylCount(r.syllable_count_rewrite);
 
-      // Adjacency gate
       const adjRaw   = typeof r.adjacency_violations === 'string' ? r.adjacency_violations.trim() : '';
       const adjClear = adjRaw.toUpperCase() === 'CLEAR' || adjRaw === '';
 
-      // Syllable gate (v2.8) — "PASS" or "FAIL:..."
-      const sylRaw   = typeof r.syllable_violations === 'string' ? r.syllable_violations.trim() : '';
-      const sylPass  = sylRaw.toUpperCase().startsWith('PASS') || sylRaw === '';
+      const sylRaw  = typeof r.syllable_violations === 'string' ? r.syllable_violations.trim() : '';
+      const sylPass = sylRaw.toUpperCase().startsWith('PASS') || sylRaw === '';
+
+      // Verbatim duplication check (v2.9)
+      const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
+      const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
       return {
         before:              r.before,
@@ -1050,6 +1052,8 @@ function parseRewrites(text) {
         adjacency_violation: adjClear ? '' : adjRaw,
         syllable_pass:       sylPass,
         syllable_violation:  sylPass ? '' : sylRaw,
+        verbatim_clear:      vtClear,
+        verbatim_violation:  vtClear ? '' : vtRaw,
         syllable_delta:      (orig !== null && rew !== null) ? rew - orig : null
       };
     });
@@ -1180,50 +1184,51 @@ A line reaches elite level only when ALL SEVEN fire:
 6. ORIGINALITY & AUTHENTICITY — feels lived-in, not assembled. Would you steal this line?
 7. MEMORABILITY — stops you. Still audible after you stop reading.
 
-BEFORE WRITING ANY REWRITE — complete this preparation block for the whole song:
+PREPARATION — complete once before any rewrite:
 
 STEP 0 — BUILD THE IMAGERY CATALOGUE
-Read the full song. List every concrete noun and physical action verb that appears in it, with the section it appears in. Format: "word (section)". This catalogue is the ONLY pool you may draw from when writing rewrites. Any word not in this list is an invented import and is forbidden.
+Read the full song. List every concrete noun and physical action verb with its section. Format: "word (section)". This is your ONLY allowed word pool. Any content word absent from this list is a forbidden import.
 
-NON-NEGOTIABLE RULES — violating any one makes the rewrite a failure:
+NON-NEGOTIABLE RULES:
 
-RULE 1 — STRUCTURAL ROLE: IDENTIFY, THEN PROVE YOUR REWRITE HONOURS IT
-Every line has exactly one job. The six jobs are:
-  - TENSION BUILDER: escalates pressure, adds stakes, tightens the screw
-  - IMAGE ANCHOR: plants a concrete visual the rest of the section hangs on
-  - RHYTHMIC RELEASE: a breath, a drop in pressure, a human exhale — often colloquial or short
-  - NARRATIVE PIVOT: marks a turn in the story or argument
-  - BREATH MOMENT: a short syllabic or melodic rest — just space, not a pivot
-  - EMOTIONAL PAYOFF: lands the emotional consequence the section has been building toward
-Name the job. Your "why" must explicitly state how the rewrite performs that same job.
+RULE 1 — STRUCTURAL ROLE
+Every line has one job: TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF.
+Name it. Your "why" must prove the rewrite performs that same job.
 
-RULE 2 — SYLLABLE GATE: SHOW WORK, THEN DECLARE PASS OR FAIL
-Count syllables word by word. Show the breakdown for both original and rewrite.
+RULE 2 — SYLLABLE GATE (retry loop — empty "after" is never acceptable)
+Count syllables word by word. Show breakdown for original and candidate rewrite.
 Example: "For(1)-good(1)-ness(1)-gra(1)-cious(1)-for(1)-good(1)-ness(1)-sake(1)" = 9.
-Then write "syllable_violations": "PASS" if rewrite is within ±1, or "FAIL: original N, rewrite M" if not.
-You may NOT write the "after" field until syllable_violations reads "PASS".
-If you cannot reach PASS without weakening the line, find a different image — never sacrifice cadence.
+Write syllable_violations: "PASS" (within ±1) or "FAIL: original N, rewrite M".
+IF FAIL: generate a new candidate and recount. Show new breakdown in syllable_count_rewrite.
+Keep iterating until PASS. You must reach PASS before writing "after". Blank "after" is forbidden.
 
-RULE 3 — ADJACENCY GATE: THREE-STEP CHECK BEFORE WRITING "after"
-STEP A — Quote the line immediately before the target and the line immediately after it verbatim.
-STEP B — List every word, root word, verb class (e.g. trap/snare/catch = entrapment class), and image in either neighbour.
-STEP C — Does your proposed rewrite contain ANY item from Step B? If yes: VIOLATION — rewrite differently. If no: write "CLEAR".
-You may NOT write "after" until adjacency_violations reads "CLEAR".
-The world_anchor must come from a NON-ADJACENT line. Never anchor to a neighbour.
+RULE 3 — ADJACENCY GATE (retry loop — empty "after" is never acceptable)
+STEP A: Quote line before and line after the target verbatim.
+STEP B: List every word, root word, verb class (trap/snare/catch = entrapment), and image in those neighbours.
+STEP C: Does candidate contain ANY item from STEP B? VIOLATION = generate new candidate, repeat STEP B+C. CLEAR = proceed.
+You must reach CLEAR before writing "after". Blank "after" is forbidden.
+World anchor must be NON-ADJACENT.
 
-RULE 4 — IMAGERY MUST COME FROM THE CATALOGUE
-Every word in your rewrite must either be (a) a function word (the, a, in, but…) or (b) drawn from the imagery catalogue you built in Step 0. If a content word in your rewrite does not appear in the catalogue, it is an invented import and the rewrite fails. Check every content word before writing "after".
+RULE 4 — VERBATIM DUPLICATION CHECK
+Before writing "after", confirm the rewrite does not exist verbatim anywhere else in the song.
+Write verbatim_check: "CLEAR" or "DUPLICATE:[matching line]".
+If DUPLICATE, generate a new candidate.
 
-RULE 5 — NO ABSTRACT EMOTIONAL STATEMENTS
-Never name a feeling. Replace every emotional abstraction with the specific physical event that produces it.
+RULE 5 — CATALOGUE CHECK
+Every content word in the rewrite must appear in imagery_catalogue.
+Write catalogue_check listing each content word and whether it appears (yes/no).
+Any content word that is "no" = forbidden import = generate new candidate.
 
-RULE 6 — WHY: MECHANISM, NOT EFFECT
-Structure: "[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]."
-Effect-only ("listener feels X") = FAIL. Source-only ("references image Y") = FAIL.
-Passing example: "'Sealed' replaces 'Left' because a sealing verb implies an active agent applying force, making the listener picture a deliberate physical closure rather than a passive absence — maintaining the TENSION BUILDER function by adding a human perpetrator to the act of foreclosure."
+RULE 6 — NO ABSTRACT EMOTIONAL STATEMENTS
+Never name a feeling. Replace every abstraction with the physical event that produces it.
 
-RULE 7 — INEVITABILITY TEST
-Is this the only line that could exist here, or just a different line? If just different — rewrite again.
+RULE 7 — WHY: LINE-SPECIFIC MECHANISM
+Structure: "[specific word/phrase] replaces [exact original words] because [what the listener now specifically pictures/hears that they did not before, and why this exact word produces that] — maintaining the [ROLE] function by [how]."
+The why must reference the specific words of THIS line. A why statement reusable across different lines is a generic assertion and fails.
+Effect-only = FAIL. Source-only = FAIL. Recycled/generic = FAIL.
+
+RULE 8 — INEVITABILITY TEST
+Is this the only line that could exist here? If just different — new candidate.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1235,51 +1240,56 @@ ${lyrics}
 Weak lines to rewrite:
 ${linesList}
 
-Respond ONLY with valid JSON, no markdown:
+Respond ONLY with valid JSON, no markdown. Every "after" MUST be non-empty. Iterate on candidates internally until both gates pass before submitting:
 {
-  "imagery_catalogue": ["<word (section)>", "<word (section)>"],
+  "imagery_catalogue": ["<word (section)>"],
   "rewrites": [
     {
       "before": "<original line verbatim>",
       "structural_role": "<ROLE TYPE> — <one sentence why>",
-      "syllable_count_original": "<word-by-word: For(1)-good(1)-ness(1)... → total: N>",
-      "syllable_count_rewrite": "<word-by-word → total: N>",
-      "syllable_violations": "<PASS — or FAIL: original N, rewrite M>",
-      "adjacency_check": "<STEP A: line before | line after> — <STEP B: words/roots/verb-classes/images in neighbours> — <STEP C: CLEAR or VIOLATION:[item]>",
-      "adjacency_violations": "<CLEAR — or every violation found>",
-      "world_anchor": "<verbatim NON-ADJACENT line/phrase from catalogue, with section>",
-      "catalogue_check": "<list every content word in your rewrite and confirm each appears in imagery_catalogue>",
-      "after": "<written only after syllable_violations=PASS and adjacency_violations=CLEAR — same role, ±1 syllable, catalogue words only>",
-      "why": "<'[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]'>"
+      "syllable_count_original": "<word(N)-word(N)... -> total: N>",
+      "syllable_count_rewrite": "<word(N)-word(N)... -> total: N — updated if prior candidates failed>",
+      "syllable_violations": "PASS",
+      "adjacency_check": "<STEP A: before | after> — <STEP B: neighbour words/roots/classes/images> — <STEP C: CLEAR>",
+      "adjacency_violations": "CLEAR",
+      "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
+      "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
+      "catalogue_check": "<content word -> in catalogue: yes/no for each>",
+      "after": "<non-empty passing candidate>",
+      "why": "<'[specific word/phrase] replaces [exact original] because [line-specific perceptual mechanism] — maintaining [ROLE] by [how]'>"
     }
   ]
 }`;
 }
 
+
 function buildSingleRegenPrompt(ctx, lyrics, line) {
   return `You are a professional master songwriter. Rewrite ONE weak line to elite level.
 
-BEFORE WRITING — build the imagery catalogue:
-Read the full song. List every concrete noun and physical action verb with its section. This is your ONLY allowed word pool for content words in the rewrite.
+PREPARATION: Build the imagery catalogue first.
+Read the full song. List every concrete noun and physical action verb with its section. This is your ONLY allowed word pool.
 
 NON-NEGOTIABLE RULES:
 
-RULE 1 — STRUCTURAL ROLE: name the job (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF). Your "why" must explicitly state how the rewrite performs that same job.
+RULE 1 — STRUCTURAL ROLE: name the job (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF). Your "why" must prove the rewrite performs that same job.
 
-RULE 2 — SYLLABLE GATE: Show word-by-word breakdown for original and rewrite. Write "syllable_violations": "PASS" (within ±1) or "FAIL: original N, rewrite M". You may NOT write "after" until syllable_violations is PASS.
+RULE 2 — SYLLABLE GATE (retry loop): Show word-by-word breakdown. Write syllable_violations: PASS (within ±1) or FAIL: original N, rewrite M. If FAIL, generate new candidate and recount. Repeat until PASS. Blank "after" is forbidden.
 
-RULE 3 — ADJACENCY GATE:
-STEP A — Quote the line before and after verbatim.
-STEP B — List every word, root, verb class, and image in those neighbours.
-STEP C — CLEAR or VIOLATION:[item]. You may NOT write "after" until adjacency_violations is CLEAR. World anchor must be non-adjacent.
+RULE 3 — ADJACENCY GATE (retry loop):
+STEP A: Quote line before and after verbatim.
+STEP B: List every word, root, verb class, and image in those neighbours.
+STEP C: CLEAR or VIOLATION:[item]. If VIOLATION, new candidate, repeat. Blank "after" is forbidden.
+World anchor must be NON-ADJACENT.
 
-RULE 4 — CATALOGUE CHECK: Every content word in your rewrite must appear in imagery_catalogue. List each content word and confirm it appears. Any word not in the catalogue = invented import = rewrite fails.
+RULE 4 — VERBATIM CHECK: Confirm rewrite does not appear verbatim elsewhere in the song. CLEAR or DUPLICATE:[line]. If DUPLICATE, new candidate.
 
-RULE 5 — NO ABSTRACT EMOTIONAL STATEMENTS: Physical event only, never named feeling.
+RULE 5 — CATALOGUE CHECK: Every content word must appear in imagery_catalogue. List each (yes/no). Any "no" = new candidate.
 
-RULE 6 — WHY: "[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]."
+RULE 6 — NO ABSTRACT EMOTIONAL STATEMENTS: Physical event only.
 
-RULE 7 — INEVITABILITY TEST: only line that could exist here, or just different? If different — rewrite.
+RULE 7 — WHY: LINE-SPECIFIC MECHANISM: "[specific word/phrase] replaces [exact original] because [what listener now specifically pictures/hears and why this exact word produces it] — maintaining [ROLE] by [how]." Must reference this line's specific words. Generic/recycled why = FAIL.
+
+RULE 8 — INEVITABILITY TEST: Only line that could exist here, or just different? If different — new candidate.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1290,26 +1300,28 @@ ${lyrics}
 
 Line to rewrite: "${line}"
 
-Respond ONLY with valid JSON, no markdown:
+Respond ONLY with valid JSON, no markdown. "after" MUST be non-empty:
 {
   "imagery_catalogue": ["<word (section)>"],
   "rewrites": [
     {
       "before": "<original line verbatim>",
       "structural_role": "<ROLE TYPE> — <one sentence why>",
-      "syllable_count_original": "<word-by-word → total: N>",
-      "syllable_count_rewrite": "<word-by-word → total: N>",
-      "syllable_violations": "<PASS — or FAIL: original N, rewrite M>",
-      "adjacency_check": "<STEP A: before | after> — <STEP B: neighbours' words/roots/classes/images> — <STEP C: CLEAR or VIOLATION:[item]>",
-      "adjacency_violations": "<CLEAR — or every violation>",
-      "world_anchor": "<verbatim NON-ADJACENT line/phrase from catalogue, with section>",
-      "catalogue_check": "<each content word in rewrite → present in catalogue: yes/no>",
-      "after": "<written only after syllable_violations=PASS AND adjacency_violations=CLEAR>",
-      "why": "<'[word/phrase] replaces [original] because [mechanism] — maintaining [ROLE] by [how]'>"
+      "syllable_count_original": "<word(N)-word(N)... -> total: N>",
+      "syllable_count_rewrite": "<word(N)-word(N)... -> total: N>",
+      "syllable_violations": "PASS",
+      "adjacency_check": "<STEP A: before | after> — <STEP B: words/roots/classes/images> — <STEP C: CLEAR>",
+      "adjacency_violations": "CLEAR",
+      "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
+      "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
+      "catalogue_check": "<content word -> in catalogue: yes/no>",
+      "after": "<non-empty passing candidate>",
+      "why": "<'[specific word/phrase] replaces [exact original] because [line-specific mechanism] — maintaining [ROLE] by [how]'>"
     }
   ]
 }`;
 }
+
 
 function buildFullRewritePrompt(ctx, lyrics, grade, targetSections) {
   const flagsText = grade.primary_flags
@@ -1792,14 +1804,19 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>`
     : '';
 
-  // Syllable gate violation warning (v2.8) — model self-reported a FAIL
+  // Syllable gate violation warning
   const sylWarning = (!r.syllable_pass && r.syllable_violation)
     ? `<div class="adj-violation-warn">⚠ Syllable flag: ${esc(r.syllable_violation)} — verify cadence manually</div>`
     : '';
 
-  // Adjacency violation warning — model self-reported a violation
+  // Adjacency violation warning
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency flag: ${esc(r.adjacency_violation)}</div>`
+    : '';
+
+  // Verbatim duplication warning (v2.9)
+  const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
+    ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
   // Syllable delta badge — amber if |delta|>1, red if model also self-reported FAIL
@@ -1818,6 +1835,7 @@ function renderRewritePairInto(pair, idx, r) {
     ${roleTag}
     ${sylWarning}
     ${adjWarning}
+    ${vtWarning}
     <div class="copyable-block">
       <div class="line-block line-before"><div class="line-tag">Original</div>${esc(r.before)}</div>
       <button class="copy-btn js-copy-before">Copy</button>
