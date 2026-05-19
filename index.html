@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v2.7</title>
+<title>Lyrics Grader v2.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -281,6 +281,7 @@ textarea { min-height: 220px; line-height: 1.85; font-size: 0.87rem; }
 .syllable-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; }
 .syllable-badge.syl-ok   { color: var(--text-3); background: var(--surface-3); border: 1px solid var(--border); }
 .syllable-badge.syl-warn { color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(212,168,67,0.3); }
+.syllable-badge.syl-fail { color: var(--red-text); background: var(--red-soft); border: 1px solid var(--red-line); }
 .structural-role { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; font-size: 0.79rem; color: var(--text-3); font-weight: 300; font-style: italic; line-height: 1.5; }
 .structural-role-label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); opacity: 0.6; flex-shrink: 0; font-style: normal; }
 .adj-violation-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--red-soft); border-left: 2px solid var(--red-line); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--red-text); margin-bottom: 10px; line-height: 1.5; }
@@ -420,7 +421,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.7</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.8</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -625,7 +626,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v2.7 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v2.8 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1013,8 +1014,10 @@ function parseRewrites(text) {
   // Fix #3: use robust extraction
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
-  // Fix #2: validate each item has required fields before returning.
-  // syllable_count_* fields are now strings ("For(1)-good(1) → total: 9") — extract trailing integer.
+  // Fix #2: validate each item has required fields.
+  // syllable_count_* are now breakdown strings — extract trailing integer.
+  // syllable_violations: "PASS" or "FAIL: original N, rewrite M" (gate field from v2.8)
+  // adjacency_violations: "CLEAR" or violation description (gate field from v2.8)
   return d.rewrites
     .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
     .map(r => {
@@ -1028,9 +1031,15 @@ function parseRewrites(text) {
       }
       const orig = extractSylCount(r.syllable_count_original);
       const rew  = extractSylCount(r.syllable_count_rewrite);
-      // adjacency_violations: "CLEAR" is passing; anything else is a flagged violation
+
+      // Adjacency gate
       const adjRaw   = typeof r.adjacency_violations === 'string' ? r.adjacency_violations.trim() : '';
       const adjClear = adjRaw.toUpperCase() === 'CLEAR' || adjRaw === '';
+
+      // Syllable gate (v2.8) — "PASS" or "FAIL:..."
+      const sylRaw   = typeof r.syllable_violations === 'string' ? r.syllable_violations.trim() : '';
+      const sylPass  = sylRaw.toUpperCase().startsWith('PASS') || sylRaw === '';
+
       return {
         before:              r.before,
         after:               r.after,
@@ -1039,6 +1048,8 @@ function parseRewrites(text) {
         structural_role:     r.structural_role || '',
         adjacency_clear:     adjClear,
         adjacency_violation: adjClear ? '' : adjRaw,
+        syllable_pass:       sylPass,
+        syllable_violation:  sylPass ? '' : sylRaw,
         syllable_delta:      (orig !== null && rew !== null) ? rew - orig : null
       };
     });
@@ -1169,54 +1180,54 @@ A line reaches elite level only when ALL SEVEN fire:
 6. ORIGINALITY & AUTHENTICITY — feels lived-in, not assembled. Would you steal this line?
 7. MEMORABILITY — stops you. Still audible after you stop reading.
 
-NON-NEGOTIABLE RULES — violating any one of these makes the rewrite a failure:
+BEFORE WRITING ANY REWRITE — complete this preparation block for the whole song:
+
+STEP 0 — BUILD THE IMAGERY CATALOGUE
+Read the full song. List every concrete noun and physical action verb that appears in it, with the section it appears in. Format: "word (section)". This catalogue is the ONLY pool you may draw from when writing rewrites. Any word not in this list is an invented import and is forbidden.
+
+NON-NEGOTIABLE RULES — violating any one makes the rewrite a failure:
 
 RULE 1 — STRUCTURAL ROLE: IDENTIFY, THEN PROVE YOUR REWRITE HONOURS IT
-Every line has exactly one job in its section. The six jobs are:
+Every line has exactly one job. The six jobs are:
   - TENSION BUILDER: escalates pressure, adds stakes, tightens the screw
-  - IMAGE ANCHOR: plants a concrete visual that the rest of the section hangs on
-  - RHYTHMIC RELEASE: provides a breath, a drop in pressure, a human exhale — often colloquial or short
+  - IMAGE ANCHOR: plants a concrete visual the rest of the section hangs on
+  - RHYTHMIC RELEASE: a breath, a drop in pressure, a human exhale — often colloquial or short
   - NARRATIVE PIVOT: marks a turn in the story or argument
-  - BREATH MOMENT: a short syllabic or melodic rest, not a pivot — just space
+  - BREATH MOMENT: a short syllabic or melodic rest — just space, not a pivot
   - EMOTIONAL PAYOFF: lands the emotional consequence the section has been building toward
+Name the job. Your "why" must explicitly state how the rewrite performs that same job.
 
-Name the job. Then, in your "why" field, you MUST explicitly state how your rewrite performs that same job. A rewrite that is "technically stronger" but does a different job is a structural failure.
-
-RULE 2 — SYLLABLE COUNT: SHOW YOUR WORK
-Count syllables by breaking the line into individual words and counting each word's syllables separately. Show the breakdown.
-Example: "For(1)-good(1)-ness(1)-gra(1)-cious(1)-for(1)-good(1)-ness(1)-sake(1)" = 9 syllables.
-Your rewrite must land within ±1 of that count.
+RULE 2 — SYLLABLE GATE: SHOW WORK, THEN DECLARE PASS OR FAIL
+Count syllables word by word. Show the breakdown for both original and rewrite.
+Example: "For(1)-good(1)-ness(1)-gra(1)-cious(1)-for(1)-good(1)-ness(1)-sake(1)" = 9.
+Then write "syllable_violations": "PASS" if rewrite is within ±1, or "FAIL: original N, rewrite M" if not.
+You may NOT write the "after" field until syllable_violations reads "PASS".
+If you cannot reach PASS without weakening the line, find a different image — never sacrifice cadence.
 
 RULE 3 — ADJACENCY GATE: THREE-STEP CHECK BEFORE WRITING "after"
-This rule is a hard gate. You must complete all three steps and report them in adjacency_check and adjacency_violations before writing your rewrite.
+STEP A — Quote the line immediately before the target and the line immediately after it verbatim.
+STEP B — List every word, root word, verb class (e.g. trap/snare/catch = entrapment class), and image in either neighbour.
+STEP C — Does your proposed rewrite contain ANY item from Step B? If yes: VIOLATION — rewrite differently. If no: write "CLEAR".
+You may NOT write "after" until adjacency_violations reads "CLEAR".
+The world_anchor must come from a NON-ADJACENT line. Never anchor to a neighbour.
 
-STEP A — Quote the line immediately before the target line and the line immediately after it verbatim.
-STEP B — List every: (1) word, (2) root word, (3) verb class (e.g. "trap/snare/catch" are the same verb class — entrapment), and (4) image that appears in either neighbour.
-STEP C — State explicitly: does your proposed rewrite contain ANY item from Step B? If yes, it is a VIOLATION and you must write a different rewrite. If no, write "CLEAR" in adjacency_violations.
-
-You may NOT write the "after" field until adjacency_violations reads "CLEAR".
-Using the adjacent line as your world_anchor is also forbidden — the world_anchor must come from a non-adjacent line elsewhere in the song.
-
-RULE 4 — NO INVENTED IMAGERY
-Use ONLY concrete nouns and physical actions already present in the full song. Catalogue the song's physical world before you write. Your rewrite extends that world from a non-adjacent source — it does not import new metaphors.
+RULE 4 — IMAGERY MUST COME FROM THE CATALOGUE
+Every word in your rewrite must either be (a) a function word (the, a, in, but…) or (b) drawn from the imagery catalogue you built in Step 0. If a content word in your rewrite does not appear in the catalogue, it is an invented import and the rewrite fails. Check every content word before writing "after".
 
 RULE 5 — NO ABSTRACT EMOTIONAL STATEMENTS
-Never name a feeling. Replace every emotional abstraction with the specific physical event that produces that feeling in the listener.
+Never name a feeling. Replace every emotional abstraction with the specific physical event that produces it.
 
 RULE 6 — WHY: MECHANISM, NOT EFFECT
-Your "why" must complete this exact sentence structure: "[Specific word or phrase] replaces [what it replaced] because [mechanism: why this word forces a different perceptual experience in the listener]."
-Effect-only ("the listener feels desolation") = FAIL.
-Source-only ("referencing the wire image from line 9") = FAIL.
-Passing example: "'Sealed' replaces 'Left' because a sealing verb implies an active agent applying force, making the listener picture a deliberate physical closure rather than a passive absence."
-Failing example: "This version creates a more tangible image."
-The why must also confirm the structural role is honoured: end with "— maintaining the [ROLE] function by [how]."
+Structure: "[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]."
+Effect-only ("listener feels X") = FAIL. Source-only ("references image Y") = FAIL.
+Passing example: "'Sealed' replaces 'Left' because a sealing verb implies an active agent applying force, making the listener picture a deliberate physical closure rather than a passive absence — maintaining the TENSION BUILDER function by adding a human perpetrator to the act of foreclosure."
 
 RULE 7 — INEVITABILITY TEST
-Before submitting: is this the only line that could exist here, or just a different line? If just different — rewrite again.
+Is this the only line that could exist here, or just a different line? If just different — rewrite again.
 
 Context: "${ctx || 'None provided'}"
 
-FULL SONG (read completely before writing — catalogue every concrete noun and physical action verb, noting which line each appears in):
+FULL SONG:
 ---
 ${lyrics}
 ---
@@ -1226,16 +1237,19 @@ ${linesList}
 
 Respond ONLY with valid JSON, no markdown:
 {
+  "imagery_catalogue": ["<word (section)>", "<word (section)>"],
   "rewrites": [
     {
       "before": "<original line verbatim>",
-      "structural_role": "<role type: TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF> — <one sentence explaining why>",
-      "syllable_count_original": "<word-by-word breakdown e.g. For(1)-good(1)-ness(1) → total: 9>",
-      "syllable_count_rewrite": "<word-by-word breakdown → total: N, within ±1 of original>",
-      "adjacency_check": "<STEP A: line before verbatim | line after verbatim> — <STEP B: words/roots/verb-classes/images in neighbours> — <STEP C: CLEAR or VIOLATION:[item]>",
-      "adjacency_violations": "<CLEAR — or name every violation found>",
-      "world_anchor": "<verbatim quote of the NON-ADJACENT existing line or phrase you extended, with its line number or section>",
-      "after": "<rewrite — only written after adjacency_violations reads CLEAR — same structural role, same syllable count ±1, only non-adjacent existing imagery>",
+      "structural_role": "<ROLE TYPE> — <one sentence why>",
+      "syllable_count_original": "<word-by-word: For(1)-good(1)-ness(1)... → total: N>",
+      "syllable_count_rewrite": "<word-by-word → total: N>",
+      "syllable_violations": "<PASS — or FAIL: original N, rewrite M>",
+      "adjacency_check": "<STEP A: line before | line after> — <STEP B: words/roots/verb-classes/images in neighbours> — <STEP C: CLEAR or VIOLATION:[item]>",
+      "adjacency_violations": "<CLEAR — or every violation found>",
+      "world_anchor": "<verbatim NON-ADJACENT line/phrase from catalogue, with section>",
+      "catalogue_check": "<list every content word in your rewrite and confirm each appears in imagery_catalogue>",
+      "after": "<written only after syllable_violations=PASS and adjacency_violations=CLEAR — same role, ±1 syllable, catalogue words only>",
       "why": "<'[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]'>"
     }
   ]
@@ -1245,34 +1259,31 @@ Respond ONLY with valid JSON, no markdown:
 function buildSingleRegenPrompt(ctx, lyrics, line) {
   return `You are a professional master songwriter. Rewrite ONE weak line to elite level.
 
-NON-NEGOTIABLE RULES — violating any one makes the rewrite a failure:
+BEFORE WRITING — build the imagery catalogue:
+Read the full song. List every concrete noun and physical action verb with its section. This is your ONLY allowed word pool for content words in the rewrite.
 
-RULE 1 — STRUCTURAL ROLE: IDENTIFY, THEN PROVE YOUR REWRITE HONOURS IT
-Name the line's job: TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF. Your "why" must explicitly state how your rewrite performs that same job. A line that does a different job is a structural failure, regardless of quality.
+NON-NEGOTIABLE RULES:
 
-RULE 2 — SYLLABLE COUNT: SHOW YOUR WORK
-Break the original into words, count each word's syllables, show the breakdown, sum to a total. Rewrite must land within ±1. Example: "For(1)-good(1)-ness(1)-gra(1)-cious(1)-for(1)-good(1)-ness(1)-sake(1)" = 9.
+RULE 1 — STRUCTURAL ROLE: name the job (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF). Your "why" must explicitly state how the rewrite performs that same job.
 
-RULE 3 — ADJACENCY GATE: COMPLETE ALL THREE STEPS BEFORE WRITING THE REWRITE
-STEP A — Quote the line immediately before and the line immediately after the target verbatim.
-STEP B — List every word, root word, verb class, and image in either neighbour.
-STEP C — Does your rewrite contain ANY item from Step B? If yes: VIOLATION — write a different rewrite. If no: write CLEAR in adjacency_violations.
-You may not write "after" until adjacency_violations is CLEAR.
-The world_anchor must come from a non-adjacent line — never from a neighbour.
+RULE 2 — SYLLABLE GATE: Show word-by-word breakdown for original and rewrite. Write "syllable_violations": "PASS" (within ±1) or "FAIL: original N, rewrite M". You may NOT write "after" until syllable_violations is PASS.
 
-RULE 4 — NO INVENTED IMAGERY: Use only concrete nouns and physical actions already in the song. No new metaphors.
+RULE 3 — ADJACENCY GATE:
+STEP A — Quote the line before and after verbatim.
+STEP B — List every word, root, verb class, and image in those neighbours.
+STEP C — CLEAR or VIOLATION:[item]. You may NOT write "after" until adjacency_violations is CLEAR. World anchor must be non-adjacent.
 
-RULE 5 — NO ABSTRACT EMOTIONAL STATEMENTS: Replace every named feeling with the physical event that produces it.
+RULE 4 — CATALOGUE CHECK: Every content word in your rewrite must appear in imagery_catalogue. List each content word and confirm it appears. Any word not in the catalogue = invented import = rewrite fails.
 
-RULE 6 — WHY: MECHANISM, NOT EFFECT
-Structure: "[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]."
-Effect-only ("listener feels X") = FAIL. Source-only ("references image Y") = FAIL.
+RULE 5 — NO ABSTRACT EMOTIONAL STATEMENTS: Physical event only, never named feeling.
 
-RULE 7 — INEVITABILITY TEST: Is this the only line that could exist here? If just different — rewrite again.
+RULE 6 — WHY: "[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]."
+
+RULE 7 — INEVITABILITY TEST: only line that could exist here, or just different? If different — rewrite.
 
 Context: "${ctx || 'None provided'}"
 
-FULL SONG (read completely — note which line each concrete noun and action verb appears in):
+FULL SONG:
 ---
 ${lyrics}
 ---
@@ -1281,17 +1292,20 @@ Line to rewrite: "${line}"
 
 Respond ONLY with valid JSON, no markdown:
 {
+  "imagery_catalogue": ["<word (section)>"],
   "rewrites": [
     {
       "before": "<original line verbatim>",
-      "structural_role": "<role type> — <one sentence why>",
-      "syllable_count_original": "<word-by-word breakdown → total: N>",
-      "syllable_count_rewrite": "<word-by-word breakdown → total: N, within ±1>",
-      "adjacency_check": "<STEP A: line before | line after> — <STEP B: neighbouring words/roots/verb-classes/images> — <STEP C: CLEAR or VIOLATION:[item]>",
-      "adjacency_violations": "<CLEAR — or every violation found>",
-      "world_anchor": "<verbatim quote of the NON-ADJACENT line/phrase extended, with its section>",
-      "after": "<rewrite — written only after adjacency_violations is CLEAR — same role, ±1 syllable, non-adjacent imagery>",
-      "why": "<'[word/phrase] replaces [original] because [perceptual mechanism] — maintaining the [ROLE] function by [how]'>"
+      "structural_role": "<ROLE TYPE> — <one sentence why>",
+      "syllable_count_original": "<word-by-word → total: N>",
+      "syllable_count_rewrite": "<word-by-word → total: N>",
+      "syllable_violations": "<PASS — or FAIL: original N, rewrite M>",
+      "adjacency_check": "<STEP A: before | after> — <STEP B: neighbours' words/roots/classes/images> — <STEP C: CLEAR or VIOLATION:[item]>",
+      "adjacency_violations": "<CLEAR — or every violation>",
+      "world_anchor": "<verbatim NON-ADJACENT line/phrase from catalogue, with section>",
+      "catalogue_check": "<each content word in rewrite → present in catalogue: yes/no>",
+      "after": "<written only after syllable_violations=PASS AND adjacency_violations=CLEAR>",
+      "why": "<'[word/phrase] replaces [original] because [mechanism] — maintaining [ROLE] by [how]'>"
     }
   ]
 }`;
@@ -1778,24 +1792,31 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>`
     : '';
 
-  // Adjacency violation warning — shown when model self-reported a violation
-  // (means it attempted a forbidden rewrite; treat with extra scepticism)
+  // Syllable gate violation warning (v2.8) — model self-reported a FAIL
+  const sylWarning = (!r.syllable_pass && r.syllable_violation)
+    ? `<div class="adj-violation-warn">⚠ Syllable flag: ${esc(r.syllable_violation)} — verify cadence manually</div>`
+    : '';
+
+  // Adjacency violation warning — model self-reported a violation
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency flag: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Syllable delta badge
+  // Syllable delta badge — amber if |delta|>1, red if model also self-reported FAIL
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
-    const d = r.syllable_delta;
+    const d    = r.syllable_delta;
     const sign = d > 0 ? '+' : '';
-    const cls  = Math.abs(d) > 1 ? 'syl-warn' : 'syl-ok';
-    syllableBadge = `<span class="syllable-badge ${cls}" title="Model-reported syllable delta (verify manually if amber)">${sign}${d} syl</span>`;
+    const cls  = (!r.syllable_pass) ? 'syl-fail'
+               : Math.abs(d) > 1    ? 'syl-warn'
+               :                      'syl-ok';
+    syllableBadge = `<span class="syllable-badge ${cls}" title="Model-reported syllable delta">${sign}${d} syl</span>`;
   }
 
   pair.innerHTML = `
     ${anchor}
     ${roleTag}
+    ${sylWarning}
     ${adjWarning}
     <div class="copyable-block">
       <div class="line-block line-before"><div class="line-tag">Original</div>${esc(r.before)}</div>
