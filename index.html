@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v2.9</title>
+<title>Lyrics Grader v3.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -421,7 +421,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v2.9</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.0</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -626,7 +626,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v2.9 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.0 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1015,22 +1015,46 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
   // Fix #2: validate each item has required fields.
-  // syllable_violations: "PASS" or "FAIL:..." (gate from v2.9)
+  // syllable_violations: "PASS" or "FAIL:..." (gate from v2.8)
   // adjacency_violations: "CLEAR" or violation (gate from v2.7)
-  // verbatim_check: "CLEAR" or "DUPLICATE:[line]" (gate from v2.9)
+  // verbatim_check: "CLEAR" or "DUPLICATE:[line]" (gate from v3.0)
+
+  // Syllable counting fallback (v3.0): when the model's breakdown string isn't
+  // parseable, count syllables directly from the text strings so the badge
+  // never silently goes dark.
+  function countSyllablesFallback(str) {
+    if (!str || typeof str !== 'string') return null;
+    // Simple English syllable estimator: count vowel groups, handle silent-e,
+    // floor at 1 per word. Good enough to catch ±2+ misses.
+    return str.trim().split(/\s+/).reduce((total, word) => {
+      const w = word.toLowerCase().replace(/[^a-z]/g, '');
+      if (!w) return total;
+      let count = (w.match(/[aeiouy]+/g) || []).length;
+      if (w.endsWith('e') && count > 1) count--;
+      if (w.endsWith('le') && w.length > 2) count = Math.max(count, 1);
+      return total + Math.max(1, count);
+    }, 0);
+  }
+
+  function extractSylCount(val) {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      // Try "→ total: N" or "-> total: N" or trailing integer
+      const m = val.match(/(?:total:\s*)?(\d+)\s*$/);
+      return m ? parseInt(m[1], 10) : null;
+    }
+    return null;
+  }
+
   return d.rewrites
     .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
     .map(r => {
-      function extractSylCount(val) {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string') {
-          const m = val.match(/(\d+)\s*$/);
-          return m ? parseInt(m[1], 10) : null;
-        }
-        return null;
-      }
-      const orig = extractSylCount(r.syllable_count_original);
-      const rew  = extractSylCount(r.syllable_count_rewrite);
+      let orig = extractSylCount(r.syllable_count_original);
+      let rew  = extractSylCount(r.syllable_count_rewrite);
+
+      // Fallback: count directly from text if model breakdown wasn't parseable
+      if (orig === null) orig = countSyllablesFallback(r.before);
+      if (rew  === null) rew  = countSyllablesFallback(r.after);
 
       const adjRaw   = typeof r.adjacency_violations === 'string' ? r.adjacency_violations.trim() : '';
       const adjClear = adjRaw.toUpperCase() === 'CLEAR' || adjRaw === '';
@@ -1038,9 +1062,14 @@ function parseRewrites(text) {
       const sylRaw  = typeof r.syllable_violations === 'string' ? r.syllable_violations.trim() : '';
       const sylPass = sylRaw.toUpperCase().startsWith('PASS') || sylRaw === '';
 
-      // Verbatim duplication check (v2.9)
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
+
+      const delta = (orig !== null && rew !== null) ? rew - orig : null;
+
+      // If model claimed PASS but our count shows |delta| > 1, downgrade to warn
+      // (doesn't override the gate — just flags it visually)
+      const sylPassEffective = sylPass && (delta === null || Math.abs(delta) <= 1);
 
       return {
         before:              r.before,
@@ -1050,11 +1079,11 @@ function parseRewrites(text) {
         structural_role:     r.structural_role || '',
         adjacency_clear:     adjClear,
         adjacency_violation: adjClear ? '' : adjRaw,
-        syllable_pass:       sylPass,
-        syllable_violation:  sylPass ? '' : sylRaw,
+        syllable_pass:       sylPassEffective,
+        syllable_violation:  sylPassEffective ? '' : (sylRaw || `estimated original ${orig}, rewrite ${rew}`),
         verbatim_clear:      vtClear,
         verbatim_violation:  vtClear ? '' : vtRaw,
-        syllable_delta:      (orig !== null && rew !== null) ? rew - orig : null
+        syllable_delta:      delta
       };
     });
 }
@@ -1203,10 +1232,10 @@ IF FAIL: generate a new candidate and recount. Show new breakdown in syllable_co
 Keep iterating until PASS. You must reach PASS before writing "after". Blank "after" is forbidden.
 
 RULE 3 — ADJACENCY GATE (retry loop — empty "after" is never acceptable)
-STEP A: Quote line before and line after the target verbatim.
+STEP A: Quote the line immediately before and the line immediately after the target verbatim.
 STEP B: List every word, root word, verb class (trap/snare/catch = entrapment), and image in those neighbours.
-STEP C: Does candidate contain ANY item from STEP B? VIOLATION = generate new candidate, repeat STEP B+C. CLEAR = proceed.
-You must reach CLEAR before writing "after". Blank "after" is forbidden.
+STEP C: Write your candidate rewrite here first. Then check: does this candidate contain ANY word, root, verb-class synonym, or image from STEP B? VIOLATION = discard candidate, generate a new one, return to STEP C. CLEAR = this candidate becomes your "after".
+CRITICAL: The candidate you declare CLEAR in STEP C must be copied verbatim into the "after" field. If you change the wording between STEP C and "after", the adjacency check is invalidated. The "after" field must be identical to the STEP C candidate.
 World anchor must be NON-ADJACENT.
 
 RULE 4 — VERBATIM DUPLICATION CHECK
@@ -1250,7 +1279,7 @@ Respond ONLY with valid JSON, no markdown. Every "after" MUST be non-empty. Iter
       "syllable_count_original": "<word(N)-word(N)... -> total: N>",
       "syllable_count_rewrite": "<word(N)-word(N)... -> total: N — updated if prior candidates failed>",
       "syllable_violations": "PASS",
-      "adjacency_check": "<STEP A: before | after> — <STEP B: neighbour words/roots/classes/images> — <STEP C: CLEAR>",
+      "adjacency_check": "<STEP A: line before | line after> — <STEP B: neighbour words/roots/classes/images> — <STEP C: candidate='[your rewrite here]' CLEAR or VIOLATION:[item]>",
       "adjacency_violations": "CLEAR",
       "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
       "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
@@ -1278,7 +1307,8 @@ RULE 2 — SYLLABLE GATE (retry loop): Show word-by-word breakdown. Write syllab
 RULE 3 — ADJACENCY GATE (retry loop):
 STEP A: Quote line before and after verbatim.
 STEP B: List every word, root, verb class, and image in those neighbours.
-STEP C: CLEAR or VIOLATION:[item]. If VIOLATION, new candidate, repeat. Blank "after" is forbidden.
+STEP C: Write your candidate rewrite here. Check: does it contain ANY word, root, verb-class synonym, or image from STEP B? VIOLATION = new candidate, repeat STEP C. CLEAR = this candidate becomes "after".
+CRITICAL: The candidate declared CLEAR in STEP C must be copied verbatim into "after". Any change between STEP C and "after" invalidates the check.
 World anchor must be NON-ADJACENT.
 
 RULE 4 — VERBATIM CHECK: Confirm rewrite does not appear verbatim elsewhere in the song. CLEAR or DUPLICATE:[line]. If DUPLICATE, new candidate.
@@ -1310,7 +1340,7 @@ Respond ONLY with valid JSON, no markdown. "after" MUST be non-empty:
       "syllable_count_original": "<word(N)-word(N)... -> total: N>",
       "syllable_count_rewrite": "<word(N)-word(N)... -> total: N>",
       "syllable_violations": "PASS",
-      "adjacency_check": "<STEP A: before | after> — <STEP B: words/roots/classes/images> — <STEP C: CLEAR>",
+      "adjacency_check": "<STEP A: before | after> — <STEP B: words/roots/classes/images> — <STEP C: candidate='[rewrite]' CLEAR or VIOLATION:[item]>",
       "adjacency_violations": "CLEAR",
       "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
       "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
@@ -1814,12 +1844,13 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="adj-violation-warn">⚠ Adjacency flag: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v2.9)
+  // Verbatim duplication warning (v3.0)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Syllable delta badge — amber if |delta|>1, red if model also self-reported FAIL
+  // Syllable delta badge — v3.0: always shows (fallback counter fills gap when model
+  // breakdown wasn't parseable). Red = model or estimator flagged > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
     const d    = r.syllable_delta;
@@ -1827,7 +1858,8 @@ function renderRewritePairInto(pair, idx, r) {
     const cls  = (!r.syllable_pass) ? 'syl-fail'
                : Math.abs(d) > 1    ? 'syl-warn'
                :                      'syl-ok';
-    syllableBadge = `<span class="syllable-badge ${cls}" title="Model-reported syllable delta">${sign}${d} syl</span>`;
+    const tip  = r.syllable_pass ? 'Syllable delta (estimated if no badge in prior versions)' : 'Syllable mismatch — verify cadence';
+    syllableBadge = `<span class="syllable-badge ${cls}" title="${tip}">${sign}${d} syl</span>`;
   }
 
   pair.innerHTML = `
