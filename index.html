@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.1</title>
+<title>Lyrics Grader v3.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -285,6 +285,7 @@ textarea { min-height: 220px; line-height: 1.85; font-size: 0.87rem; }
 .structural-role { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; font-size: 0.79rem; color: var(--text-3); font-weight: 300; font-style: italic; line-height: 1.5; }
 .structural-role-label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); opacity: 0.6; flex-shrink: 0; font-style: normal; }
 .adj-violation-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--red-soft); border-left: 2px solid var(--red-line); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--red-text); margin-bottom: 10px; line-height: 1.5; }
+.syn-swap-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--gold-dim); border-left: 2px solid rgba(212,168,67,0.4); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--gold); margin-bottom: 10px; line-height: 1.5; }
 
 /* Accepted buffer */
 .accepted-buffer { display: none; margin-top: 20px; }
@@ -421,7 +422,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 <header>
   <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.1</span></h1>
+  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.2</span></h1>
   <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
 </header>
 
@@ -626,7 +627,7 @@ footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; f
 
 </main>
 
-<footer>Lyrics Grader v3.1 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>Lyrics Grader v3.2 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1015,7 +1016,7 @@ function parseRewrites(text) {
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
 
-  // v3.1: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
+  // v3.2: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
   // The model's breakdown integers are treated as scaffolding only; they are often
   // fabricated to support a false PASS claim. We count independently from the
   // actual before/after strings and override the model's verdict when they conflict.
@@ -1050,11 +1051,15 @@ function parseRewrites(text) {
       const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
       const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
 
+      // Synonym-swap check (v3.2)
+      const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim() : '';
+      const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '';
+
       // Pass/fail purely from our counter — model's syllable_violations field ignored
       // for badge rendering (it's still in the JSON but we don't trust it)
       const sylPassEffective = delta === null || Math.abs(delta) <= 1;
 
-      // Client-side adjacency check (v3.1): parse Step B words from adjacency_check
+      // Client-side adjacency check (v3.2): parse Step B words from adjacency_check
       // field and test them against the actual after string. Catches cases where the
       // model falsely asserts CLEAR without checking its candidate.
       const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
@@ -1093,6 +1098,8 @@ function parseRewrites(text) {
         syllable_violation:  sylPassEffective ? '' : `client count: original ${orig}, rewrite ${rew}`,
         verbatim_clear:      vtClear,
         verbatim_violation:  vtClear ? '' : vtRaw,
+        synonym_clear:       synClear,
+        synonym_violation:   synClear ? '' : synRaw,
         syllable_delta:      delta
       };
     });
@@ -1230,6 +1237,15 @@ Read the full song. List every concrete noun and physical action verb with its s
 
 NON-NEGOTIABLE RULES:
 
+RULE 0 — SYNONYM-SWAP PRE-CHECK (run before writing any candidate)
+For each weak line, list the key nouns and verbs in the original. Then ask: is your rewrite replacing those words with synonyms or near-equivalents of the same abstraction level? If yes, it is a synonym swap and is forbidden.
+Examples of forbidden synonym swaps:
+  - "built their walls" → "constructed their barriers" (same image, different words)
+  - "turned your future into ash" → "reduced your path to rubble" (same image, different words)
+  - "planned the fall" → "designed the end" (same abstraction, different words)
+A legitimate rewrite finds a different concrete event from the imagery catalogue that does the same emotional work — not the same event with different vocabulary.
+Write synonym_check: "CLEAR" (genuinely different image) or "SWAP:[original concept]" (synonym swap — find a different image).
+
 RULE 1 — STRUCTURAL ROLE
 Every line has one job: TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF.
 Name it. Your "why" must prove the rewrite performs that same job.
@@ -1285,6 +1301,7 @@ Respond ONLY with valid JSON, no markdown. Every "after" MUST be non-empty. Iter
   "rewrites": [
     {
       "before": "<original line verbatim>",
+      "synonym_check": "<CLEAR — or SWAP:[original concept] if this is a synonym swap, then find a different image>",
       "structural_role": "<ROLE TYPE> — <one sentence why>",
       "syllable_count_original": "<word(N)-word(N)... -> total: N>",
       "syllable_count_rewrite": "<word(N)-word(N)... -> total: N — updated if prior candidates failed>",
@@ -1294,7 +1311,7 @@ Respond ONLY with valid JSON, no markdown. Every "after" MUST be non-empty. Iter
       "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
       "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
       "catalogue_check": "<content word -> in catalogue: yes/no for each>",
-      "after": "<non-empty passing candidate>",
+      "after": "<non-empty passing candidate that cleared synonym_check, syllable gate, adjacency gate, verbatim check, and catalogue check>",
       "why": "<'[specific word/phrase] replaces [exact original] because [line-specific perceptual mechanism] — maintaining [ROLE] by [how]'>"
     }
   ]
@@ -1309,6 +1326,8 @@ PREPARATION: Build the imagery catalogue first.
 Read the full song. List every concrete noun and physical action verb with its section. This is your ONLY allowed word pool.
 
 NON-NEGOTIABLE RULES:
+
+RULE 0 — SYNONYM-SWAP PRE-CHECK: List the key nouns and verbs in the original line. Is your candidate replacing them with synonyms at the same abstraction level? ("built walls" → "constructed barriers" = swap. "built walls" → "cast the net" = different image.) If it's a swap, generate a different image from the catalogue. Write synonym_check: CLEAR or SWAP:[concept].
 
 RULE 1 — STRUCTURAL ROLE: name the job (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF). Your "why" must prove the rewrite performs that same job.
 
@@ -1346,11 +1365,8 @@ Respond ONLY with valid JSON, no markdown. "after" MUST be non-empty:
   "rewrites": [
     {
       "before": "<original line verbatim>",
+      "synonym_check": "<CLEAR — or SWAP:[concept], then find a different image>",
       "structural_role": "<ROLE TYPE> — <one sentence why>",
-      "syllable_count_original": "<word(N)-word(N)... -> total: N>",
-      "syllable_count_rewrite": "<word(N)-word(N)... -> total: N>",
-      "syllable_violations": "PASS",
-      "adjacency_check": "<STEP A: before | after> — <STEP B: words/roots/classes/images> — <STEP C: candidate='[rewrite]' CLEAR or VIOLATION:[item]>",
       "adjacency_violations": "CLEAR",
       "verbatim_check": "<CLEAR or DUPLICATE:[line]>",
       "world_anchor": "<verbatim NON-ADJACENT line/phrase, with section>",
@@ -1506,6 +1522,12 @@ async function startGrade(mode) {
 
   renderResults(gradeResult, usedModel, rewrites, fullSong, mode, prevHistory, targetSections);
   showPhase('phaseResults');
+
+  // Auto-repair any rewrites that failed client-side validation (syllable mismatch
+  // or empty after). Fires once per line — user can still manually regenerate after.
+  if (mode === 'surgical' && rewrites.length) {
+    autoRepairRewrites();
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1565,8 +1587,51 @@ async function regenLine(idx) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Accept / skip
+// Auto-repair: sequentially regen rewrites that failed client validation
 // ─────────────────────────────────────────────────────────────────────────────
+async function autoRepairRewrites() {
+  // Find indices that need repair: empty after OR syllable fail
+  // Run at most one repair attempt per line (don't loop infinitely)
+  const toRepair = appState.rewrites
+    .map((r, idx) => ({ idx, r }))
+    .filter(({ r }) => !r.after || !r.after.trim() || r.syllable_pass === false);
+
+  if (!toRepair.length) return;
+
+  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim() };
+  if (!keys.groq && !keys.gemini) return;
+
+  const retries = parseInt($('retryCount').value, 10) || 0;
+  const total   = toRepair.length;
+
+  for (let i = 0; i < toRepair.length; i++) {
+    const { idx, r } = toRepair[i];
+    const line = r.before;
+    if (!line) continue;
+
+    setStatus(`Auto-repairing ${i + 1}/${total} broken rewrites…`, 'repair');
+    controller = new AbortController();
+    const { signal } = controller;
+
+    try {
+      const resp = await callAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, line), signal, retries, 0.82);
+      const result = parseRewrites(resp.text);
+      if (result[0] && result[0].after && result[0].after.trim()) {
+        appState.rewrites[idx] = result[0];
+        delete appState.acceptedRewrites[idx];
+        renderRewritePair(idx, result[0]);
+        updateAcceptedBuffer();
+      }
+    } catch(e) {
+      if (e.name === 'AbortError') { controller = null; setStatus(''); return; }
+      // Silently skip — user can manually regenerate if auto-repair also fails
+    } finally {
+      controller = null;
+    }
+  }
+
+  setStatus('');
+}
 function acceptRewrite(idx) {
   const r = appState.rewrites[idx];
   if (!r) return;
@@ -1849,17 +1914,22 @@ function renderRewritePairInto(pair, idx, r) {
     ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
     : '';
 
-  // Adjacency violation warning — may be model-reported or client-detected (v3.1)
+  // Adjacency violation warning — may be model-reported or client-detected (v3.2)
   const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
     ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
     : '';
 
-  // Verbatim duplication warning (v3.1)
+  // Verbatim duplication warning (v3.2)
   const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
     ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
     : '';
 
-  // Syllable delta badge — v3.1: always computed from actual text strings,
+  // Synonym-swap warning (v3.2) — quality flag, shown in amber not red
+  const synWarning = (!r.synonym_clear && r.synonym_violation)
+    ? `<div class="syn-swap-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate for a genuinely different image</div>`
+    : '';
+
+  // Syllable delta badge — v3.2: always computed from actual text strings,
   // independent of model's claimed counts. Red = client counter says > ±1.
   let syllableBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
@@ -1878,6 +1948,7 @@ function renderRewritePairInto(pair, idx, r) {
     ${sylWarning}
     ${adjWarning}
     ${vtWarning}
+    ${synWarning}
     <div class="copyable-block">
       <div class="line-block line-before"><div class="line-tag">Original</div>${esc(r.before)}</div>
       <button class="copy-btn js-copy-before">Copy</button>
