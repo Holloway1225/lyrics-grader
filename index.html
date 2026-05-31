@@ -408,7 +408,7 @@ footer {
   <h1>Lyrics <em>Grader</em></h1>
   <div class="header-sub">
     Seven-dimension rubric · Per-category path to 10/10 · No rewrites
-    <span class="version-badge">v1.9</span>
+    <span class="version-badge">v2.0</span>
   </div>
 </header>
 
@@ -527,7 +527,7 @@ footer {
 
 </div><!-- /wrap -->
 
-<footer>Lyrics Grader v1.9 · Seven-dimension rubric · Nothing stored server-side</footer>
+<footer>Lyrics Grader v2.0 · Seven-dimension rubric · Nothing stored server-side</footer>
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -570,22 +570,27 @@ function extractJSON(raw) {
   return end !== -1 ? raw.slice(start, end + 1) : raw.slice(start);
 }
 
-// Strip any "such as '…'" / "for example '…'" / ", like '…'" tail the model
-// sneaks into path_to_10 steps despite being told not to.
-// Also drops steps that are clearly truncated mid-sentence.
+// Strip example/rewrite tails the model sneaks in despite instructions, and
+// drop steps that are clearly truncated mid-sentence.
 function sanitizeStep(step) {
   if (typeof step !== 'string') return null;
   let s = step;
-  // Remove trailing example clauses
+  // Remove trailing "such as / for example / like '…'" example clauses
   s = s
     .replace(/[,;]?\s*(such as|for example|like|e\.g\.)[^"']*["'][^"']*["'][^"']*$/i, '')
-    .replace(/[,;]?\s*(such as|for example|like|e\.g\.).*$/i, '')
-    .trim()
-    .replace(/[,;:\s]+$/, '');
-  // Drop steps that are truncated: too short, just a quote, or end with "feels" / "is" / "feels a"
+    .replace(/[,;]?\s*(such as|for example|like|e\.g\.).*$/i, '');
+  // Remove "replace with '…'" / "replace it with '…'" rewrite tails — keep the command up to "replace"
+  s = s.replace(/\s*(and\s+)?replace\s+(it\s+)?with\s+["'][^"']*["'].*$/i, '');
+  // Remove a trailing "with '…'" that's a bare rewrite
+  s = s.replace(/\s*—\s*[^—]*\bwith\s+["'][^"']*["']\s*$/i, m => {
+    // only strip the quoted bit, keep the diagnosis/command frame
+    return m.replace(/\bwith\s+["'][^"']*["']\s*$/i, '').replace(/[\s—-]+$/, '');
+  });
+  s = s.trim().replace(/[,;:\s]+$/, '');
+  // Drop truncated steps
   if (s.length < 30) return null;
-  if (/—\s*(this line feels|this feels|this line is|this phrase feels|this image feels)\s*$/.test(s)) return null;
-  if (/^['"][^'"]{0,80}['"]?\s*—?\s*$/.test(s)) return null; // bare quote with nothing after
+  if (/—\s*(this line feels|this feels|this line is|this phrase feels|this image feels|the line feels|the phrase feels)\s*$/i.test(s)) return null;
+  if (/^['"][^'"]{0,80}['"]?\s*—?\s*$/.test(s)) return null;
   return s;
 }
 
@@ -777,7 +782,7 @@ PATH-TO-10 — exactly 2 steps per dimension. Each step is three parts separated
   "VERBATIM LINE" — EXACT MECHANICAL FAILURE at the word level — COMMAND naming the fix mechanism
 
 Failure diagnosis MUST follow this template: "the word/phrase '[X]' [does Y / fails to do Y] because [specific reason at the level of the listener's sensory or cognitive experience]." Accepted: "'feeling' names a category — it has no texture, weight, or location in the listener's mind." "'found religion' is an idiom — it processes as 'transformed' and produces no image." "'slowly' tells the listener how to experience the image instead of letting the image move at its own speed." Rejected: "could be more evocative", "feels slightly generic", "fails to evoke a specific memory", "could be more distinctive" — these are quality verdicts, not mechanical diagnoses.
-Command: use cut / find X already in this song's world and make it do Y / restructure so stressed syllable falls on Z / the rhyme forces a stop — cut it. Banned: consider, try, explore, perhaps, add more, replace with something, could be more, make it more. No example rewrites. No "such as". Direction ends at the period.
+Command: use cut / find X already in this song's world and make it do Y / restructure so stressed syllable falls on Z / the rhyme forces a stop — cut it. Banned: consider, try, explore, perhaps, add more, replace with something, could be more, make it more. NEVER write the replacement line — no "replace with 'new words'", no "cut X and replace with 'Y'". The command says what to do, never what to write. When you say "find X already in this song's world", X must be a phrase that ACTUALLY appears in the lyrics above — never invent a phrase like "a unique expression of loss" that isn't really there. No example rewrites. No "such as". Direction ends at the period.
 Test: remove the quoted line from the step — if the failure and command still apply to a line in a different song unchanged, the diagnosis is not specific enough.
 
 PRIMARY FLAGS — verbatim line only, zero annotation:
