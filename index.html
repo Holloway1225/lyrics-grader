@@ -382,6 +382,9 @@ select:focus { border-color: var(--signal); }
 .btn-regrade:hover { background: rgba(200,121,58,0.15); }
 .btn-reset { padding: 11px 28px; background: transparent; border: 1px solid var(--border-2); border-radius: 7px; font-family: var(--mono); font-size: 0.62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); transition: all .15s; }
 .btn-reset:hover { border-color: var(--border-3); color: var(--text-2); }
+.btn-copy-report { padding: 11px 28px; background: transparent; border: 1px solid var(--border-2); border-radius: 7px; font-family: var(--mono); font-size: 0.62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); transition: all .15s; }
+.btn-copy-report:hover { border-color: var(--border-3); color: var(--text-2); }
+.btn-copy-report.copied { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
 
 footer {
   text-align: center; padding: 20px;
@@ -490,6 +493,7 @@ footer {
   </div>
 
   <div class="bottom-row">
+    <button class="btn-copy-report" id="copyReportBtn">⎘ Copy Full Report</button>
     <button class="btn-regrade" id="regradeBtn">↺ Regrade This Song</button>
     <button class="btn-reset" id="resetBtn">← Grade Another</button>
   </div>
@@ -559,6 +563,7 @@ $('lyrics').addEventListener('keydown', e => {
 $('gradeBtn').addEventListener('click', doGrade);
 $('cancelBtn').addEventListener('click', cancelReq);
 $('histBtn').addEventListener('click', () => $('historyPanel').classList.toggle('open'));
+$('copyReportBtn').addEventListener('click', copyReport);
 $('regradeBtn').addEventListener('click', () => { $('lyrics').value = state.lyrics; $('context').value = state.ctx; $('charCount').textContent = state.lyrics.length.toLocaleString(); showPhase('phaseInput'); });
 $('resetBtn').addEventListener('click', resetAll);
 
@@ -634,7 +639,7 @@ async function callGroq(key, prompt, modelIdx, signal, retries) {
   const res = await fetchRetry(
     'https://api.groq.com/openai/v1/chat/completions',
     { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: GROQ_MODELS[modelIdx], temperature: 0.65, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }) },
+      body: JSON.stringify({ model: GROQ_MODELS[modelIdx], temperature: 0.65, max_tokens: 5000, messages: [{ role: 'user', content: prompt }] }) },
     signal, retries
   );
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw Object.assign(new Error(e?.error?.message || `Groq ${res.status}`), { status: res.status }); }
@@ -645,7 +650,7 @@ async function callGemini(key, prompt, signal, retries) {
   const res = await fetchRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: 4000 } }) },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: 5000 } }) },
     signal, retries
   );
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw Object.assign(new Error(e?.error?.message || `Gemini ${res.status}`), { status: res.status }); }
@@ -657,7 +662,7 @@ async function callClaude(key, prompt, signal, retries) {
     'https://api.anthropic.com/v1/messages',
     { method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4000, temperature: 0.65, messages: [{ role: 'user', content: prompt }] }) },
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 5000, temperature: 0.65, messages: [{ role: 'user', content: prompt }] }) },
     signal, retries
   );
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw Object.assign(new Error(e?.error?.message || `Anthropic ${res.status}`), { status: res.status }); }
@@ -732,11 +737,23 @@ GRADING RUBRIC — seven dimensions, each scored 1–10:
    High: Multiple lines that stop you. Phrasing you can still hear after you stop reading.
    Test: What line will you remember in a week?
 
-For EACH dimension, after scoring and noting what's there, provide 2–4 specific, actionable steps the writer must take to push THAT dimension to 10/10. These steps must:
-- Quote the actual weak line(s) by name
-- Name the exact problem (too abstract, clichéd word, meter breaks here, etc.)
-- Give a specific direction (not a rewrite — a direction: "replace the abstraction with the physical event that causes the feeling", "cut the last four words", "the rhyme on 'new/into' is forced — find a rhyme that earns itself")
-- Be honest. If a line is a cliché, name the cliché. If the rhyme is forced, say so.
+For EACH dimension, provide 2–4 path-to-10 steps. These are surgical instructions, not encouragement.
+
+MANDATORY FORMAT FOR EVERY STEP:
+1. Quote the specific line verbatim in quotes.
+2. Name the exact failure — not a category, the actual thing wrong. Examples of acceptable failures: "the word 'feeling' is doing emotional work that an image should do", "'locking every exit door' is a borrowed phrase — it has appeared in a hundred other songs about being trapped", "the stressed syllable falls on 'is' not 'lock' — the meter fights the meaning", "'found religion' is a dead metaphor, it carries no weight".
+3. Give the specific direction to fix it. Not "be more specific" — say what kind of specific. Not "find a fresher image" — say what domain to look in, what the line is trying to do, what it needs to show instead of say. Example directions: "the line is trying to say time is inescapable — find the physical object in this song's world that already represents containment and make time act on that instead", "cut everything after the comma — the line lands on 'numb', everything after explains what the listener should feel for themselves", "the rhyme pair 'new/into' is forcing a full stop where the feeling should still be moving — find a rhyme that lands softer or cut the rhyme entirely".
+
+BANNED STEPS — reject any step that contains these phrases or their equivalents:
+- "be more specific" / "add more detail" / "amplify the unique aspects"
+- "replace clichéd phrases with fresh expressions"
+- "experiment with metaphors" (too vague — must name the domain)
+- "refine the language" / "polish the phrasing"
+- "trust the listener" (without naming the line that doesn't)
+- "add sensory details" (without naming what sense is missing and in which line)
+- Any step that could apply to a different song without changing a single word
+
+If a dimension is already at 9–10, the steps must still name the one or two lines preventing a clean 10 and say exactly what they need.
 
 Song context: "${ctx || 'None provided'}"
 
@@ -1032,7 +1049,75 @@ function renderHistory(history) {
   });
 }
 
-// ── Reset ──────────────────────────────────────────────────────────────────
+// ── Copy report ────────────────────────────────────────────────────────────
+function buildReportText() {
+  const g = state.gradeResult;
+  if (!g) return '';
+  const lines = [];
+  const sep = '─'.repeat(60);
+
+  // Header
+  if (state.ctx) lines.push(`CONTEXT\n${state.ctx}`);
+  lines.push(`\nOVERALL: ${g.overall}/10`);
+  lines.push(`Graded via ${state.usedModel}`);
+
+  // Verdict
+  lines.push(`\n${sep}\nVERDICT\n${sep}`);
+  lines.push(g.verdict);
+
+  // Primary flags
+  const f = g.primary_flags || {};
+  const flagEntries = [
+    f.show_vs_tell && f.show_vs_tell !== 'none' ? `Show vs Tell:    "${f.show_vs_tell}"` : null,
+    f.interchangeable && f.interchangeable !== 'none' ? `Interchangeable: "${f.interchangeable}"` : null,
+    f.filler && f.filler !== 'none' ? `Filler:          "${f.filler}"` : null,
+  ].filter(Boolean);
+  if (flagEntries.length) {
+    lines.push(`\n${sep}\nPRIMARY FAILURE MODES\n${sep}`);
+    flagEntries.forEach(e => lines.push(e));
+  }
+
+  // Checklist
+  const cl = g.checklist || {};
+  lines.push(`\n${sep}\nSONG CHECKLIST\n${sep}`);
+  if (cl.central_idea)       lines.push(`Central Idea:     ${cl.central_idea}`);
+  if (cl.cohesion)           lines.push(`Cohesion:         ${cl.cohesion.toUpperCase()}`);
+  if (cl.imagery_quality)    lines.push(`Imagery:          ${cl.imagery_quality.toUpperCase()}`);
+  if (cl.prosody_issues)     lines.push(`Prosody Issue:    ${cl.prosody_issues}`);
+  if (cl.most_memorable_line) lines.push(`Most Memorable:   "${cl.most_memorable_line}"`);
+
+  // Dimensions
+  lines.push(`\n${sep}\nSEVEN DIMENSIONS — PATH TO 10/10\n${sep}`);
+  (g.dimensions || []).forEach(dim => {
+    lines.push(`\n${dim.label.toUpperCase()}  ${dim.score}/10`);
+    lines.push(dim.note);
+    if (Array.isArray(dim.path_to_10) && dim.path_to_10.length) {
+      lines.push('Path to 10/10:');
+      dim.path_to_10.forEach((step, i) => lines.push(`  ${i + 1}. ${step}`));
+    }
+  });
+
+  return lines.join('\n');
+}
+
+function copyReport() {
+  const text = buildReportText();
+  if (!text) return;
+  const btn = $('copyReportBtn');
+  const done = () => {
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '⎘ Copy Full Report'; btn.classList.remove('copied'); }, 2200);
+  };
+  navigator.clipboard.writeText(text).then(done).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    done();
+  });
+}
+
+
 function resetAll() {
   const saved = state.gradeHistory;
   state = { gradeResult: null, usedModel: null, ctx: '', lyrics: '', gradeHistory: saved };
