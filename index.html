@@ -553,6 +553,8 @@ function barColor(n) {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+
 $('lyrics').addEventListener('input', () => {
   const n = $('lyrics').value.length;
   $('charCount').textContent = n.toLocaleString();
@@ -582,6 +584,8 @@ $('anthropicKey').addEventListener('input', e => { try { localStorage.setItem('l
 (function initHistory() {
   try { const h = sessionStorage.getItem('lg_history'); if (h) state.gradeHistory = JSON.parse(h); } catch(_) {}
 })();
+
+}); // end DOMContentLoaded
 
 // ── UI helpers ─────────────────────────────────────────────────────────────
 function showPhase(id) {
