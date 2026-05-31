@@ -408,7 +408,7 @@ footer {
   <h1>Lyrics <em>Grader</em></h1>
   <div class="header-sub">
     Seven-dimension rubric · Per-category path to 10/10 · No rewrites
-    <span class="version-badge">v1.5</span>
+    <span class="version-badge">v1.6</span>
   </div>
 </header>
 
@@ -519,7 +519,7 @@ footer {
 
 </div><!-- /wrap -->
 
-<footer>Lyrics Grader v1.5 · Seven-dimension rubric · Nothing stored server-side</footer>
+<footer>Lyrics Grader v1.6 · Seven-dimension rubric · Nothing stored server-side</footer>
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -724,73 +724,30 @@ async function callAPI(keys, prompt, signal, retries) {
 
 // ── Prompt ─────────────────────────────────────────────────────────────────
 function buildPrompt(ctx, lyrics) {
-  return `You are a professional songwriter, A&R consultant, and lyric critic with 30+ years across rock, alternative, metal, folk, and electronic genres. You evaluate lyrics with surgical honesty. You never soften feedback. You always cite specific lines.
+  return `You are a professional lyric critic and A&R consultant. Grade with surgical honesty. Cite specific lines. Never soften.
 
-GRADING RUBRIC — seven dimensions, each scored 1–10:
+SEVEN DIMENSIONS — score each 1–10:
+1. EMOTIONAL SPECIFICITY — hyper-specific lived detail vs generic feeling. Test: could this line appear in 100 other songs?
+2. IMAGERY & VISUAL LANGUAGE — cinematic, tangible, sensory. Test: can you picture it? Is the image fresh or recycled?
+3. CONCEPT & COHESION — one controlling idea through every section; verses build, bridge shifts, final chorus lands differently. Test: one sentence — what is this about?
+4. COMPRESSION & SUBTEXT — maximum meaning per word, layers reward rereading. Test: can any word be cut?
+5. PROSODY & FLOW — stressed syllables land on emotional beats, cadence inevitable. Test: read aloud — resist or flow?
+6. ORIGINALITY & AUTHENTICITY — fresh angles, lived-in, not assembled. Test: would you steal a line?
+7. MEMORABILITY — quotable, tattoeable, sticks after one listen. Test: what line do you remember in a week?
 
-1. EMOTIONAL SPECIFICITY
-   The difference between generic feeling and hyper-specific lived experience.
-   Low (4–6): "I'm lost," "I miss you" — could be anyone's song.
-   High (9–10): A detail so precise it could only come from one person's life, yet unlocks universal recognition.
-   Test: Could this line appear in a hundred other songs? If yes, it scores low.
+SCORING: 7 = solid, some filler. 9 = elite, 1–2 weak lines. 10 = every line necessary, no filler.
 
-2. IMAGERY & VISUAL LANGUAGE
-   Lyrics should be cinematic. The listener should see a scene.
-   Low: Abstract statements, no physical world.
-   High: Tangible, specific, sensory detail throughout. Every image earns its place.
-   Test: Can you picture it? Is the image fresh or recycled?
+PATH-TO-10 — exactly 2 steps per dimension. Each step is three parts separated by em-dashes, no exceptions:
+  "VERBATIM LINE" — EXACT MECHANICAL FAILURE at the word level — COMMAND naming the fix mechanism
 
-3. CONCEPT STRENGTH & COHESION
-   One controlling idea, carried consistently. Verses build toward the chorus. Bridge genuinely shifts perspective. Final chorus lands differently than the first because of everything before it.
-   Low: Scattered thoughts, no clear through-line, repeated sections that restate instead of deepen.
-   High: Every section serves the central idea. The song makes an argument and resolves it.
-   Test: What is this song about in one sentence? Does every section support that?
+Failure: name the specific word that fails and what it fails to do in the listener's mind. "Overused" or "feels generic" are rejected — too vague to act on.
+Command: use cut / find X in this song's world and make it do Y / restructure so stressed syllable falls on Z. Banned words: consider, try, explore, perhaps, add more, replace with something fresher. No example rewrites, no "such as", no demonstration lines. Direction ends at the period.
+Test: remove the quoted line — if the step still applies to another song, rewrite it.
 
-4. COMPRESSION & SUBTEXT
-   Maximum meaning per word. What the line hides matters as much as what it says.
-   Low: Over-explained, filler phrases, states what it should show.
-   High: Subtext expands on reread. Nothing wasted. Layers of meaning.
-   Test: Can any word be cut without losing meaning?
-
-5. PROSODY & FLOW
-   Words and melody work together naturally. Stressed syllables land on emotional beats.
-   Low: Clunky phrasing, syllables that fight the meter, lines that feel written to rhyme.
-   High: Cadence feels inevitable. Natural to sing.
-   Test: Read it aloud. Does it resist or flow?
-
-6. ORIGINALITY & AUTHENTICITY
-   Fresh angles on familiar human experiences.
-   Low: Recycled phrasing, clichés, lines that feel borrowed.
-   High: Surprising but natural phrasing. A point of view only this writer could have. Feels true, not constructed.
-   Test: Would you steal a line from this?
-
-7. MEMORABILITY
-   Lines that stick. Phrasing so precise it becomes quotable.
-   Low: Forgettable. Nothing to hold onto after one listen.
-   High: Multiple lines that stop you. Phrasing you can still hear after you stop reading.
-   Test: What line will you remember in a week?
-
-For EACH dimension, provide 2–3 path-to-10 steps. These are surgical instructions, not encouragement.
-
-MANDATORY FORMAT FOR EVERY STEP — three parts, separated by em-dashes:
-1. Quote the specific line verbatim in double quotes.
-2. Name the exact mechanical failure at the level of the specific word or phrase — not a category verdict. BAD: "this metaphor is overused." GOOD: "'found religion' activates no physical picture in the listener's mind — it's an idiom, not an image." BAD: "this line feels generic." GOOD: "'becoming a feeling' names an emotional category instead of a physical event — 'feeling' has no texture, weight, or location." The diagnosis must be so specific that it could not apply to any other line in any other song.
-3. Give the exact direction. The direction names what the line is trying to do and what mechanism will fix it. It does NOT use the words: "consider", "think about", "try", "explore", "experiment", "replace with something", "find a fresher", "add more". Instead it commands: "cut", "find the object in this song's world that already does X and make it do Y instead", "the stressed syllable must fall on Z — restructure the phrase so Z lands on the downbeat", "the rhyme forces a stop where the line should keep moving — cut the rhyme".
-
-CRITICAL — NO EXAMPLE REWRITES: Do NOT write what the new line could sound like. No "such as '…'", no "for example '…'", no sample lines in quotes. The direction ends at the mechanical instruction. The writer does the writing.
-
-BANNED STEP LANGUAGE — any step using these words or constructions fails and must be replaced:
-- "consider", "think about", "try adding", "you might", "perhaps"
-- "overused" / "a bit clichéd" / "feels familiar" / "been used before" (verdict without diagnosis)
-- "more unique" / "fresher" / "more original" (direction without mechanism)
-- "add more context" / "add more details" / "add more specificity" (direction without naming what)
-- "add a specific personal detail" / "add a unique element" / "incorporate an element" (too vague)
-- "replace with a more unique image or concept" (direction without naming the mechanism)
-- "could be more personalized" / "could be more distinctive" (verdict without diagnosis)
-- "add or emphasize" / "extend the metaphor" without naming which word and what it must do
-- Any step where removing the quoted line would leave a step that applies to a different song
-
-If a dimension is already at 9–10, the steps must still name the one or two lines preventing a clean 10 and diagnose them at the word level.
+PRIMARY FLAGS — verbatim line only, zero annotation:
+show_vs_tell: line that states emotion instead of showing it
+interchangeable: line with no fingerprint — swappable with any song on same theme  
+filler: line weakest for compression — most words, least meaning added
 
 Song context: "${ctx || 'None provided'}"
 
@@ -799,95 +756,11 @@ LYRICS:
 ${lyrics}
 ---
 
-Respond ONLY with valid JSON, no markdown fences.
+Respond ONLY with valid JSON. No markdown fences. No text outside the JSON object.
 
-Each path_to_10 step MUST follow this exact three-part structure with no deviations:
-"[QUOTED LINE] — [NAME THE EXACT FAILURE] — [DIRECTION TO FIX IT]"
-
-The direction ends at the period. No "such as", no "for example", no demonstration line. The writer finds the answer themselves.
-
-{
-  "overall": <1–10 one decimal — your holistic weighted assessment>,
-  "dimensions": [
-    {
-      "label": "Emotional Specificity",
-      "score": <1–10>,
-      "note": "<1–2 sentences citing strongest and weakest lines>",
-      "path_to_10": [
-        "<quoted line> — <exact failure named> — <direction only, no example rewrite>",
-        "<quoted line> — <exact failure named> — <direction only, no example rewrite>"
-      ]
-    },
-    {
-      "label": "Imagery & Visual Language",
-      "score": <1–10>,
-      "note": "<1–2 sentences>",
-      "path_to_10": [
-        "<quoted line> — <exact failure> — <direction only>",
-        "<quoted line> — <exact failure> — <direction only>"
-      ]
-    },
-    {
-      "label": "Concept & Cohesion",
-      "score": <1–10>,
-      "note": "<1–2 sentences>",
-      "path_to_10": [
-        "<quoted line> — <exact failure> — <direction only>",
-        "<quoted line> — <exact failure> — <direction only>"
-      ]
-    },
-    {
-      "label": "Compression & Subtext",
-      "score": <1–10>,
-      "note": "<1–2 sentences>",
-      "path_to_10": [
-        "<quoted line> — <exact failure> — <direction only>",
-        "<quoted line> — <exact failure> — <direction only>"
-      ]
-    },
-    {
-      "label": "Prosody & Flow",
-      "score": <1–10>,
-      "note": "<1–2 sentences>",
-      "path_to_10": [
-        "<quoted line> — <exact failure> — <direction only>",
-        "<quoted line> — <exact failure> — <direction only>"
-      ]
-    },
-    {
-      "label": "Originality & Authenticity",
-      "score": <1–10>,
-      "note": "<1–2 sentences>",
-      "path_to_10": [
-        "<quoted line> — <exact failure> — <direction only>",
-        "<quoted line> — <exact failure> — <direction only>"
-      ]
-    },
-    {
-      "label": "Memorability",
-      "score": <1–10>,
-      "note": "<1–2 sentences>",
-      "path_to_10": [
-        "<quoted line> — <exact failure> — <direction only>",
-        "<quoted line> — <exact failure> — <direction only>"
-      ]
-    }
-  ],
-  "primary_flags": {
-    "show_vs_tell": "<the most abstract telling line copied verbatim — the line itself only, no explanation, no em-dash, no annotation after it>",
-    "interchangeable": "<the most replaceable line copied verbatim — the line itself only, no explanation>",
-    "filler": "<the weakest compression line copied verbatim — the line itself only, no explanation>"
-  },
-  "checklist": {
-    "central_idea": "<one sentence: what this song is about>",
-    "cohesion": "<yes/partial/no>",
-    "imagery_quality": "<fresh/mixed/generic>",
-    "prosody_issues": "<specific line that fights its meter, or 'none'>",
-    "most_memorable_line": "<the single line you'd remember after one listen>"
-  },
-  "verdict": "<honest 2–3 sentence summary — lead with the single biggest thing holding it back, end with what it would take to reach the next tier>"
-}`;
+{"overall":<1-10 one decimal>,"dimensions":[{"label":"Emotional Specificity","score":<1-10>,"note":"<1-2 sentences citing strongest and weakest line>","path_to_10":["<verbatim line> — <exact failure at word level> — <command>","<verbatim line> — <exact failure at word level> — <command>"]},{"label":"Imagery & Visual Language","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Concept & Cohesion","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Compression & Subtext","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Prosody & Flow","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Originality & Authenticity","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Memorability","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]}],"primary_flags":{"show_vs_tell":"<verbatim line only>","interchangeable":"<verbatim line only>","filler":"<verbatim line only>"},"checklist":{"central_idea":"<one sentence>","cohesion":"<yes/partial/no>","imagery_quality":"<fresh/mixed/generic>","prosody_issues":"<verbatim line or none>","most_memorable_line":"<verbatim line>"},"verdict":"<2-3 sentences — biggest thing holding it back, then what it takes to reach next tier>"}`;
 }
+
 
 // ── Parse ──────────────────────────────────────────────────────────────────
 function parseGrade(text) {
