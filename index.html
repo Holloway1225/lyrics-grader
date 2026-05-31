@@ -3,663 +3,1419 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lyrics Grader v3.8</title>
+<title>Lyrics Grader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #09080a;
-  --surface:     #100f12;
-  --surface-2:   #161418;
-  --surface-3:   #1c1920;
-  --border:      rgba(255,255,255,0.06);
-  --border-mid:  rgba(255,255,255,0.10);
-  --border-hi:   rgba(255,255,255,0.16);
-  --text:        #ede8e1;
-  --text-2:      #9b9390;
-  --text-3:      #514d4a;
-  --gold:        #d4a843;
-  --gold-dim:    rgba(212,168,67,0.10);
-  --red-soft:    rgba(200,70,70,0.12);
-  --red-line:    rgba(200,70,70,0.4);
-  --red-text:    #c07878;
-  --green-soft:  rgba(100,180,120,0.10);
-  --green-line:  rgba(100,180,120,0.4);
-  --green-text:  #88c4a0;
-  --signal:      #7a9fc2;
-  --signal-soft: rgba(122,159,194,0.10);
-  --signal-line: rgba(122,159,194,0.4);
-  --signal-text: #9ab8d0;
-  --blue-soft:   rgba(122,159,194,0.10);
-  --blue-line:   rgba(122,159,194,0.35);
-  --blue-text:   #9ab8d0;
-  --radius:      10px;
-  --shadow:      0 2px 4px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4);
-  --transition:  0.18s cubic-bezier(0.4,0,0.2,1);
+  --ink:       #0a0908;
+  --paper:     #f0ece4;
+  --paper-2:   #e8e3da;
+  --paper-3:   #ddd7cc;
+  --line:      rgba(10,9,8,0.12);
+  --line-mid:  rgba(10,9,8,0.22);
+  --line-hi:   rgba(10,9,8,0.5);
+  --text:      #0a0908;
+  --text-2:    #4a4540;
+  --text-3:    #8a8278;
+  --text-4:    #b5b0a8;
+  --signal:    #c8350a;       /* transmission red */
+  --signal-bg: rgba(200,53,10,0.07);
+  --signal-line: rgba(200,53,10,0.3);
+  --gold:      #8a6c1a;
+  --gold-bg:   rgba(138,108,26,0.08);
+  --green:     #1a6b3a;
+  --green-bg:  rgba(26,107,58,0.08);
+  --green-line: rgba(26,107,58,0.3);
+  --red:       #8b1a1a;
+  --red-bg:    rgba(139,26,26,0.08);
+  --red-line:  rgba(139,26,26,0.3);
+  --radius:    4px;
+  --mono:      'Space Mono', monospace;
+  --serif:     'Instrument Serif', serif;
+  --sans:      'Instrument Sans', sans-serif;
+  --display:   'Bebas Neue', sans-serif;
 }
 
-html { scroll-behavior: smooth; color-scheme: dark; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.65; }
-button { color: inherit; font-family: inherit; }
-header, main, footer { position: relative; z-index: 1; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+  /* noise overlay */
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+* { position: relative; z-index: 1; }
 
+button { font-family: inherit; color: inherit; cursor: pointer; }
+
+/* ── LAYOUT ── */
+.layout { max-width: 1100px; margin: 0 auto; }
+
+/* ── HEADER ── */
 header {
-  padding: 56px 24px 44px; text-align: center; position: relative;
-  border-bottom: 1px solid var(--border); overflow: hidden;
+  border-bottom: 2px solid var(--ink);
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 24px;
+  min-height: 120px;
 }
-header::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse 50% 60% at 50% -10%, rgba(212,168,67,0.09) 0%, transparent 65%),
-              radial-gradient(ellipse 80% 40% at 50% 100%, rgba(212,168,67,0.03) 0%, transparent 70%);
+.header-left { padding-bottom: 20px; }
+.header-signal {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.eyebrow { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 16px; }
-header h1 { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3.8rem); letter-spacing: -0.025em; line-height: 1.0; margin-bottom: 12px; }
-header h1 em { font-style: italic; color: var(--gold); }
-header p { color: var(--text-2); font-size: 0.88rem; font-weight: 300; max-width: 460px; margin: 0 auto; }
-.version-tag { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); border: 1px solid var(--border-mid); border-radius: 4px; padding: 2px 7px; margin-left: 8px; vertical-align: middle; }
+.signal-dot {
+  width: 6px; height: 6px;
+  background: var(--signal);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+h1 {
+  font-family: var(--display);
+  font-size: clamp(4rem, 10vw, 7rem);
+  letter-spacing: 0.02em;
+  line-height: 0.9;
+  color: var(--ink);
+}
+h1 em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--signal);
+  letter-spacing: -0.01em;
+}
+.header-right {
+  padding-bottom: 22px;
+  text-align: right;
+}
+.version-badge {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border: 1px solid var(--line-mid);
+  padding: 3px 8px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+.header-desc {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-weight: 300;
+  line-height: 1.5;
+  max-width: 220px;
+  margin-left: auto;
+}
 
-main { max-width: 860px; margin: 0 auto; padding: 32px 20px 100px; }
+/* ── MAIN ── */
+main { padding: 0 32px 80px; }
 
-/* Keys */
-.keys-panel { margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.keys-panel summary {
-  list-style: none; cursor: pointer; user-select: none; padding: 12px 18px;
-  font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--text-3); display: flex; align-items: center; gap: 8px;
-  background: var(--surface); transition: color var(--transition);
+/* ── PHASE ── */
+.phase { display: none; }
+.phase.active { display: block; animation: slideIn 0.35s ease; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── KEYS PANEL ── */
+.keys-details {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0;
 }
-.keys-panel summary::-webkit-details-marker { display: none; }
-.keys-panel summary:hover { color: var(--text-2); }
-.keys-panel summary .chevron { margin-left: auto; font-size: 0.7rem; transition: transform 0.2s; }
-.keys-panel[open] summary .chevron { transform: rotate(180deg); }
-.keys-inner { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; padding: 18px; background: var(--surface-2); border-top: 1px solid var(--border); }
+.keys-summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 14px 0;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.15s;
+}
+.keys-summary::-webkit-details-marker { display: none; }
+.keys-summary:hover { color: var(--text-2); }
+.keys-summary .chev { margin-left: auto; transition: transform 0.18s; }
+.keys-details[open] .keys-summary .chev { transform: rotate(180deg); }
+.keys-inner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-bottom: 20px;
+}
 @media (max-width: 600px) { .keys-inner { grid-template-columns: 1fr; } }
 
-/* Card / Fields */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 26px; margin-bottom: 16px; box-shadow: var(--shadow); }
-.field { margin-bottom: 18px; }
-.field:last-of-type { margin-bottom: 0; }
-label { display: block; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); margin-bottom: 7px; }
-label .sub { font-family: 'DM Sans', sans-serif; text-transform: none; letter-spacing: 0; font-size: 0.75rem; font-weight: 300; color: var(--text-3); }
-input[type="text"], input[type="password"], textarea {
-  width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px;
-  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text);
-  outline: none; transition: border-color var(--transition), box-shadow var(--transition); resize: vertical;
+/* ── INPUT AREA ── */
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  min-height: 520px;
 }
-input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,168,67,0.09); }
-textarea { min-height: 220px; line-height: 1.85; font-size: 0.87rem; }
-::placeholder { color: var(--text-3); }
-.char-row { display: flex; justify-content: space-between; margin-top: 5px; }
-.char-count, .shortcut-hint { font-family: 'DM Mono', monospace; font-size: 0.67rem; color: var(--text-3); }
+@media (max-width: 780px) { .input-grid { grid-template-columns: 1fr; } }
 
-/* Controls row */
-.controls-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
-@media (max-width: 560px) { .controls-row { grid-template-columns: 1fr; } }
-.control-group { display: flex; flex-direction: column; gap: 7px; }
-.control-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
-.control-select {
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 7px 10px; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-2);
-  outline: none; cursor: pointer; transition: border-color var(--transition);
+.lyrics-pane {
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
 }
-.control-select:focus { border-color: var(--gold); }
+.pane-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.char-ct { color: var(--text-4); }
+textarea#lyrics {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.9;
+  padding: 20px;
+  min-height: 400px;
+}
+textarea#lyrics::placeholder { color: var(--text-4); font-style: italic; }
 
-/* Section picker */
-.section-picker { margin-bottom: 18px; display: none; }
-.section-picker.visible { display: block; }
-.section-picker-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); margin-bottom: 9px; }
-.section-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.side-pane { display: flex; flex-direction: column; }
+
+.side-block {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.side-block-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+input[type="text"], input[type="password"] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  outline: none;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text);
+  padding: 6px 0;
+  transition: border-color 0.15s;
+}
+input:focus { border-bottom-color: var(--signal); }
+input::placeholder { color: var(--text-4); }
+
+.side-hint {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin-top: 6px;
+  font-weight: 300;
+}
+.section-label-hint {
+  display: none;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--gold);
+  margin-top: 8px;
+}
+.section-label-hint.visible { display: block; }
+
+/* Controls */
+.controls-block { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.ctrl-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.ctrl-row:last-of-type { margin-bottom: 0; }
+.ctrl-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+select {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  outline: none;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text-2);
+  padding: 5px 0;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+select:focus { border-bottom-color: var(--signal); }
+
+/* Section chips */
+.section-picker { display: none; }
+.section-picker.visible { display: block; margin-top: 12px; }
+.section-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .section-chip {
-  padding: 5px 12px; border: 1px solid var(--border-mid); border-radius: 20px;
-  font-family: 'DM Mono', monospace; font-size: 0.64rem; letter-spacing: 0.08em;
-  color: var(--text-3); cursor: pointer; transition: all var(--transition); background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border: 1px solid var(--line-mid);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-3);
+  background: transparent;
   user-select: none;
 }
-.section-chip:hover { border-color: var(--border-hi); color: var(--text-2); }
-.section-chip.selected { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
-.section-chip-all { border-color: var(--border-mid); }
+.section-chip:hover { border-color: var(--line-hi); color: var(--text-2); }
+.section-chip.selected { border-color: var(--signal); color: var(--signal); background: var(--signal-bg); }
 
-/* Mode buttons */
-.mode-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); margin-bottom: 10px; }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.btn-mode {
-  flex: 1; min-width: 140px; padding: 14px 18px; border: 1px solid var(--border-mid);
-  border-radius: 8px; background: var(--surface-2); cursor: pointer;
-  transition: all var(--transition); text-align: left; position: relative; overflow: hidden;
+/* Action buttons */
+.action-pane {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
 }
-.btn-mode:hover:not(:disabled) { border-color: var(--gold); background: var(--surface-3); }
-.btn-mode:disabled { opacity: 0.38; cursor: not-allowed; }
-.btn-mode-title { font-family: 'DM Serif Display', serif; font-size: 1.0rem; color: var(--text); display: block; margin-bottom: 3px; }
-.btn-mode-sub { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; color: var(--text-3); font-weight: 300; display: block; line-height: 1.4; }
-.btn-mode.surgical .btn-mode-title { color: var(--gold); }
-.btn-mode.full .btn-mode-title { color: var(--green-text); }
-.btn-mode.surgical { border-color: rgba(212,168,67,0.3); }
-.btn-mode.full { border-color: rgba(100,180,120,0.3); }
-.btn-mode.surgical:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,168,67,0.05); }
-.btn-mode.full:hover:not(:disabled) { border-color: var(--green-line); background: rgba(100,180,120,0.05); }
-
-.btn-cancel {
-  width: 100%; padding: 12px 18px; background: transparent; border: 1px solid var(--border-mid);
-  border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--text-2);
-  cursor: pointer; display: none; transition: border-color var(--transition), color var(--transition); margin-top: 10px;
+.btn-primary {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--ink);
+  border: none;
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: background 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-.btn-cancel:hover { border-color: rgba(200,70,70,0.5); color: #c08080; }
-.btn-cancel.visible { display: block; }
-
-/* Delta banner */
-.delta-banner {
-  display: none; align-items: center; gap: 10px; padding: 12px 18px;
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
-  margin-bottom: 16px; flex-wrap: wrap;
+.btn-primary:hover:not(:disabled) { background: #1e1b17; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-primary .btn-sub {
+  font-size: 0.55rem;
+  opacity: 0.5;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  font-style: italic;
 }
-.delta-banner.active { display: flex; }
-.delta-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
-.delta-scores { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.delta-item { display: flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--surface-3); border-radius: 5px; border: 1px solid var(--border); }
-.delta-item-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
-.delta-item-val { font-family: 'DM Serif Display', serif; font-size: 0.95rem; }
-.delta-item-val.up { color: var(--green-text); }
-.delta-item-val.down { color: var(--red-text); }
-.delta-item-val.same { color: var(--text-3); }
-.delta-arrow { font-size: 0.75rem; color: var(--text-3); }
-.delta-new-val { font-family: 'DM Serif Display', serif; font-size: 0.95rem; color: var(--text-2); }
+.btn-secondary {
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid var(--line-mid);
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--line-hi); color: var(--text); }
+.btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-cancel-sm {
+  width: 100%;
+  padding: 9px;
+  background: transparent;
+  border: 1px solid var(--red-line);
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+  display: none;
+}
+.btn-cancel-sm.visible { display: block; }
+.btn-cancel-sm:hover { background: var(--red-bg); }
 
-/* Status */
-.status-bar { display: none; align-items: center; gap: 14px; padding: 13px 18px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+/* ── STATUS ── */
+.status-bar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-2);
+}
 .status-bar.active { display: flex; }
-.spinner { width: 15px; height: 15px; border: 1.5px solid var(--border-mid); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+.spinner {
+  width: 12px; height: 12px;
+  border: 1.5px solid var(--line-mid);
+  border-top-color: var(--signal);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
-.status-text { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.08em; color: var(--text-2); }
-.status-step { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--gold); background: var(--gold-dim); padding: 2px 8px; border-radius: 3px; }
-.status-attempt { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-3); }
+.status-step {
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  color: var(--signal);
+  background: var(--signal-bg);
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+.status-attempt { margin-left: auto; color: var(--text-4); }
 
-/* Error */
-.error-box { display: none; padding: 13px 17px; background: rgba(200,70,70,0.07); border: 1px solid rgba(200,70,70,0.2); border-radius: var(--radius); color: #d08080; font-size: 0.87rem; line-height: 1.6; margin-bottom: 16px; }
+/* ── ERROR ── */
+.error-box {
+  display: none;
+  padding: 12px 20px;
+  background: var(--red-bg);
+  border-left: 3px solid var(--red-line);
+  color: var(--red);
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
 .error-box.active { display: block; }
-.error-box strong { color: #e09090; font-weight: 600; }
-.error-detail { margin-top: 6px; font-size: 0.8rem; opacity: 0.7; font-family: 'DM Mono', monospace; }
+.error-detail { font-family: var(--mono); font-size: 0.7rem; opacity: 0.6; margin-top: 4px; }
 
-/* Phases */
-.phase { display: none; }
-.phase.active { display: block; animation: fadeUp 0.4s ease; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Sections */
-.section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px 26px; margin-bottom: 14px; }
-.sec-hd { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
-.sec-hd h3 { font-family: 'DM Serif Display', serif; font-size: 1.1rem; letter-spacing: -0.01em; }
-.sec-tag { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); background: var(--gold-dim); padding: 3px 9px; border-radius: 4px; }
-.sec-tag.green { color: var(--green-text); background: var(--green-soft); }
-.sec-tag.blue { color: var(--blue-text); background: var(--blue-soft); }
-
-/* Grade header */
-.grade-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
-.grade-hd-left h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; letter-spacing: -0.02em; margin-bottom: 4px; }
-.model-tag { font-family: 'DM Mono', monospace; font-size: 0.63rem; color: var(--text-3); }
-.overall-block { text-align: right; }
-.overall-num { font-family: 'DM Serif Display', serif; font-size: 3.4rem; line-height: 1; color: var(--gold); letter-spacing: -0.02em; }
-.overall-denom { font-size: 1.1rem; color: var(--text-3); font-weight: 300; }
-.overall-lbl { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-top: 2px; }
-.overall-delta { font-family: 'DM Mono', monospace; font-size: 0.68rem; margin-top: 4px; }
-.overall-delta.up { color: var(--green-text); }
-.overall-delta.down { color: var(--red-text); }
-.overall-delta.same { color: var(--text-3); }
-
-/* Score grid */
-.score-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 16px 0; }
-.score-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; opacity: 0; transform: translateY(6px); animation: cardIn 0.3s ease forwards; }
-@keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
-.score-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
-.score-lbl { font-family: 'DM Mono', monospace; font-size: 0.59rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
-.score-val-group { display: flex; align-items: baseline; gap: 5px; }
-.score-val { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--text); }
-.score-delta-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; }
-.score-delta-badge.up { color: var(--green-text); background: var(--green-soft); }
-.score-delta-badge.down { color: var(--red-text); background: var(--red-soft); }
-.score-track { height: 2px; background: var(--border); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
-.score-fill { height: 100%; background: var(--gold); border-radius: 2px; width: 0; transition: width 1.1s cubic-bezier(0.16,1,0.3,1); }
-.score-note { font-size: 0.79rem; color: var(--text-2); font-weight: 300; line-height: 1.5; }
-
-/* Verdict + flags */
-.verdict-body { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 0.98rem; line-height: 1.85; color: #cfc9bc; margin-bottom: 16px; }
-.flags-block { display: flex; flex-direction: column; gap: 7px; }
-.flag-row { display: flex; flex-direction: column; gap: 3px; padding: 10px 13px; background: var(--red-soft); border-left: 2px solid var(--red-line); border-radius: 6px; }
-.flag-label { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red-text); opacity: 0.7; }
-.flag-value { font-size: 0.83rem; color: var(--red-text); line-height: 1.5; font-style: italic; }
-
-/* Master intro */
-.master-intro { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; padding: 14px 17px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
-.master-icon { font-size: 1.2rem; flex-shrink: 0; }
-.master-label { font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
-.master-desc { font-size: 0.81rem; color: var(--text-2); font-weight: 300; }
-
-/* Surgical rewrite pairs */
-.rewrite-pair { padding: 20px 0; border-bottom: 1px solid var(--border); }
-.rewrite-pair:first-child { padding-top: 0; }
-.rewrite-pair:last-child { border-bottom: none; padding-bottom: 0; }
-
-.copyable-block { position: relative; margin-bottom: 8px; }
-.line-block { padding: 12px 50px 12px 15px; border-radius: 7px; font-size: 0.87rem; line-height: 1.7; }
-.line-tag { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.55; margin-bottom: 4px; }
-.line-before { background: var(--red-soft); border-left: 2px solid var(--red-line); color: var(--red-text); }
-.line-after { background: var(--green-soft); border-left: 2px solid var(--green-line); color: var(--green-text); }
-.line-accepted { background: var(--blue-soft); border-left: 2px solid var(--blue-line); color: var(--blue-text); }
-
-.rewrite-why { padding: 10px 50px 10px 13px; background: rgba(255,255,255,0.025); border-radius: 6px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--text-3); line-height: 1.6; font-style: italic; position: relative; }
-.rewrite-why::before { content: '↳ '; color: var(--gold); font-style: normal; opacity: 0.6; }
-
-.world-anchor { display: inline-flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 0.57rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal-text); background: var(--signal-soft); border: 1px solid var(--signal-line); padding: 3px 8px; border-radius: 4px; margin-bottom: 9px; }
-
-/* Rewrite actions row */
-.rewrite-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
-.btn-accept {
-  padding: 6px 14px; background: var(--green-soft); border: 1px solid var(--green-line);
-  border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--green-text); cursor: pointer; transition: all var(--transition);
+/* ── RESULTS HEADER ── */
+.results-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+  padding: 28px 0 20px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 0;
 }
-.btn-accept:hover:not(:disabled) { background: rgba(100,180,120,0.2); }
-.btn-accept:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-accept.accepted { background: rgba(100,180,120,0.2); border-color: var(--green-line); }
-.btn-skip {
-  padding: 6px 14px; background: transparent; border: 1px solid var(--border-mid);
-  border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text-3); cursor: pointer; transition: all var(--transition);
+.results-song-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
 }
-.btn-skip:hover:not(:disabled) { border-color: var(--border-hi); color: var(--text-2); }
-.btn-skip:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-regen {
-  padding: 6px 14px; background: transparent; border: 1px solid rgba(212,168,67,0.25);
-  border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--gold); opacity: 0.7; cursor: pointer; transition: all var(--transition);
+.results-context-text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--text-2);
 }
-.btn-regen:hover:not(:disabled) { opacity: 1; background: var(--gold-dim); }
-.btn-regen:disabled { opacity: 0.3; cursor: not-allowed; }
-.accepted-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-text); background: var(--blue-soft); border: 1px solid var(--blue-line); padding: 3px 8px; border-radius: 4px; }
-.syllable-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; }
-.syllable-badge.syl-ok   { color: var(--text-3); background: var(--surface-3); border: 1px solid var(--border); }
-.syllable-badge.syl-warn { color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(212,168,67,0.3); }
-.syllable-badge.syl-fail { color: var(--red-text); background: var(--red-soft); border: 1px solid var(--red-line); }
-.structural-role { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; font-size: 0.79rem; color: var(--text-3); font-weight: 300; font-style: italic; line-height: 1.5; }
-.structural-role-label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); opacity: 0.6; flex-shrink: 0; font-style: normal; }
-.adj-violation-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--red-soft); border-left: 2px solid var(--red-line); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--red-text); margin-bottom: 10px; line-height: 1.5; }
-.syn-swap-warn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--gold-dim); border-left: 2px solid rgba(212,168,67,0.4); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--gold); margin-bottom: 10px; line-height: 1.5; }
-.auto-repaired-tag { display: inline-flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-text); background: var(--blue-soft); border: 1px solid var(--blue-line); padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; }
-
-/* Accepted buffer */
-.accepted-buffer { display: none; margin-top: 20px; }
-.accepted-buffer.visible { display: block; }
-.accepted-buffer-header { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue-text); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-.accepted-buffer-body {
-  background: var(--surface-2); border: 1px solid var(--blue-line); border-radius: 8px;
-  padding: 16px 18px; font-family: 'DM Sans', sans-serif; font-size: 0.87rem;
-  line-height: 2.0; white-space: pre-wrap; word-break: break-word; color: var(--text); position: relative;
+.grade-block { text-align: right; }
+.grade-num {
+  font-family: var(--display);
+  font-size: 6rem;
+  line-height: 0.85;
+  letter-spacing: 0.01em;
+  color: var(--ink);
 }
-.btn-copy-buffer {
-  padding: 6px 14px; background: transparent; border: 1px solid var(--blue-line);
-  border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--blue-text); cursor: pointer; transition: all var(--transition);
+.grade-num.high { color: var(--green); }
+.grade-num.mid  { color: var(--gold); }
+.grade-num.low  { color: var(--red); }
+.grade-denom { font-family: var(--mono); font-size: 0.7rem; color: var(--text-3); }
+.grade-model { font-family: var(--mono); font-size: 0.58rem; color: var(--text-4); margin-top: 4px; }
+.grade-delta {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  margin-top: 4px;
 }
-.btn-copy-buffer:hover { background: var(--blue-soft); }
-.btn-copy-buffer.copied { background: var(--blue-soft); }
+.grade-delta.up   { color: var(--green); }
+.grade-delta.down { color: var(--red); }
+.grade-delta.same { color: var(--text-3); }
 
-/* Copy buttons */
-.copy-btn {
-  position: absolute; top: 8px; right: 8px;
-  background: rgba(255,255,255,0.05); border: 1px solid var(--border-mid);
-  border-radius: 5px; padding: 3px 8px; cursor: pointer;
-  font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text-3);
-  transition: all var(--transition); white-space: nowrap;
+/* ── DELTA BANNER ── */
+.delta-bar {
+  display: none;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
 }
-.copy-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-2); border-color: var(--border-hi); }
-.copy-btn.copied { color: var(--green-text); border-color: var(--green-line); background: var(--green-soft); }
+.delta-bar.active { display: flex; }
+.delta-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-4); }
+.delta-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.delta-chip {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  padding: 3px 9px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.delta-chip .lbl { font-size: 0.55rem; opacity: 0.6; }
+.delta-chip .val.up   { color: var(--green); }
+.delta-chip .val.down { color: var(--red); }
+.delta-chip .val.same { color: var(--text-4); }
 
-.copy-all-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
-.btn-copy-all { padding: 7px 15px; background: transparent; border: 1px solid var(--border-mid); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); cursor: pointer; transition: all var(--transition); }
-.btn-copy-all:hover { border-color: var(--border-hi); color: var(--text-2); }
-.btn-copy-all.copied { color: var(--green-text); border-color: var(--green-line); background: var(--green-soft); }
+/* ── PARTIAL / REPAIR NOTICES ── */
+.notice {
+  display: none;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--gold);
+}
+.notice.active { display: block; }
 
-/* Full rewrite output */
-.full-rewrite-block { background: var(--surface-2); border: 1px solid var(--green-line); border-radius: 10px; position: relative; }
-.full-rewrite-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
-.full-rewrite-title { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green-text); }
-.full-rewrite-body { padding: 20px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--text); line-height: 2.0; white-space: pre-wrap; word-break: break-word; }
-.btn-copy-full { padding: 7px 15px; background: transparent; border: 1px solid var(--green-line); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green-text); cursor: pointer; transition: all var(--transition); }
-.btn-copy-full:hover { background: var(--green-soft); }
-.btn-copy-full.copied { background: var(--green-soft); }
-
-/* Partial failure notice */
-.partial-notice { padding: 11px 15px; background: rgba(212,168,67,0.07); border: 1px solid rgba(212,168,67,0.2); border-radius: var(--radius); color: var(--gold); font-size: 0.83rem; line-height: 1.6; margin-bottom: 16px; display: none; }
-.partial-notice.active { display: block; }
-
-/* Actions */
-.action-list { list-style: none; counter-reset: ac; }
-.action-list li { counter-increment: ac; display: flex; gap: 15px; padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 0.87rem; color: var(--text-2); line-height: 1.6; font-weight: 300; align-items: flex-start; }
-.action-list li:first-child { padding-top: 0; }
-.action-list li:last-child { border-bottom: none; padding-bottom: 0; }
-.action-list li::before { content: counter(ac, decimal-leading-zero); font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--gold); min-width: 20px; margin-top: 3px; opacity: 0.85; }
-
-/* History */
-.history-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.history-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
-.btn-history { padding: 6px 13px; background: transparent; border: 1px solid var(--border-mid); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); cursor: pointer; transition: all var(--transition); }
-.btn-history:hover { border-color: var(--border-hi); color: var(--text-2); }
-.history-panel { display: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+/* ── HISTORY ── */
+.history-row {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.history-row.visible { display: flex; }
+.history-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-4); }
+.btn-hist {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--line-mid);
+  color: var(--text-3);
+  padding: 4px 10px;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+.btn-hist:hover { border-color: var(--line-hi); color: var(--text-2); }
+.history-panel { display: none; border-bottom: 1px solid var(--line); }
 .history-panel.open { display: block; }
-.history-entry { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity var(--transition); }
-.history-entry:hover { opacity: 0.75; }
-.history-entry:last-child { border-bottom: none; padding-bottom: 0; }
-.history-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-3); min-width: 18px; }
-.history-score { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--gold); min-width: 38px; }
-.history-meta { flex: 1; }
-.history-meta-top { font-size: 0.8rem; color: var(--text-2); }
-.history-meta-time { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-3); margin-top: 2px; }
-.history-delta { font-family: 'DM Mono', monospace; font-size: 0.68rem; padding: 2px 7px; border-radius: 4px; }
-.history-delta.up { color: var(--green-text); background: var(--green-soft); }
-.history-delta.down { color: var(--red-text); background: var(--red-soft); }
-.history-delta.same { color: var(--text-3); background: var(--surface-3); }
-
-/* Bottom actions */
-.btn-reset { display: block; margin: 24px auto 0; padding: 11px 34px; background: transparent; border: 1px solid var(--border-mid); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--text-3); cursor: pointer; transition: border-color var(--transition), color var(--transition); }
-.btn-reset:hover { border-color: var(--border-hi); color: var(--text-2); }
-.btn-regrade { display: block; margin: 0 auto 12px; padding: 11px 34px; background: var(--gold-dim); border: 1px solid rgba(212,168,67,0.3); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--gold); cursor: pointer; transition: all var(--transition); }
-.btn-regrade:hover { background: rgba(212,168,67,0.15); }
-
-/* Onboarding hint */
-.onboard-hint {
-  display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px;
-  background: rgba(212,168,67,0.04); border: 1px solid rgba(212,168,67,0.14);
-  border-radius: var(--radius); margin-bottom: 16px;
+.history-entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
-.onboard-hint.hidden { display: none; }
-.onboard-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; opacity: 0.6; }
-.onboard-body { flex: 1; }
-.onboard-title { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); opacity: 0.75; margin-bottom: 6px; }
-.onboard-text { font-size: 0.81rem; color: var(--text-3); line-height: 1.7; font-weight: 300; }
-.onboard-text code { font-family: 'DM Mono', monospace; font-size: 0.76rem; color: var(--text-2); background: var(--surface-3); padding: 1px 5px; border-radius: 3px; }
-.onboard-text strong { color: var(--text-2); font-weight: 400; }
-.onboard-dismiss { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 1.1rem; line-height: 1; padding: 2px; flex-shrink: 0; opacity: 0.4; transition: opacity var(--transition); }
-.onboard-dismiss:hover { opacity: 0.9; }
+.history-entry:hover { opacity: 0.65; }
+.history-entry:last-child { border-bottom: none; }
+.hist-num { font-family: var(--mono); font-size: 0.62rem; color: var(--text-4); min-width: 18px; }
+.hist-score { font-family: var(--display); font-size: 1.5rem; color: var(--ink); min-width: 46px; line-height: 1; }
+.hist-meta { flex: 1; }
+.hist-meta-top { font-size: 0.8rem; color: var(--text-2); }
+.hist-meta-time { font-family: var(--mono); font-size: 0.58rem; color: var(--text-4); }
+.hist-delta { font-family: var(--mono); font-size: 0.62rem; padding: 2px 7px; border-radius: 2px; border: 1px solid var(--line); }
+.hist-delta.up   { color: var(--green); }
+.hist-delta.down { color: var(--red); }
+.hist-delta.same { color: var(--text-4); }
 
-/* Advanced settings toggle */
-.advanced-toggle {
-  display: flex; align-items: center; gap: 8px; width: 100%; cursor: pointer;
-  user-select: none; background: none; border: none; border-top: 1px solid var(--border);
-  padding: 11px 0 0; margin-top: 16px; font-family: 'DM Mono', monospace;
-  font-size: 0.61rem; letter-spacing: 0.13em; text-transform: uppercase;
-  color: var(--text-3); transition: color var(--transition);
+/* ── SCORE GRID ── */
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid var(--line);
 }
-.advanced-toggle:hover { color: var(--text-2); }
-.adv-chevron { margin-left: auto; font-size: 0.65rem; transition: transform 0.2s; }
-.advanced-toggle.open .adv-chevron { transform: rotate(180deg); }
-.advanced-panel { display: none; padding-top: 14px; }
-.advanced-panel.open { display: block; animation: fadeUp 0.22s ease; }
+@media (max-width: 900px) { .score-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 500px) { .score-grid { grid-template-columns: repeat(2, 1fr); } }
+.score-cell {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 16px 14px;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: cellIn 0.3s ease forwards;
+}
+.score-cell:last-child { border-right: none; }
+@keyframes cellIn { to { opacity: 1; transform: translateY(0); } }
+.score-fill-bg {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: var(--signal-bg);
+  height: 0;
+  transition: height 1s cubic-bezier(0.16,1,0.3,1);
+}
+.score-cell-label {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.score-cell-num {
+  font-family: var(--display);
+  font-size: 2.2rem;
+  line-height: 0.9;
+  color: var(--ink);
+}
+.score-cell-note {
+  font-size: 0.73rem;
+  color: var(--text-2);
+  margin-top: 7px;
+  line-height: 1.5;
+  font-weight: 300;
+}
+.score-delta { font-family: var(--mono); font-size: 0.58rem; margin-top: 3px; }
+.score-delta.up   { color: var(--green); }
+.score-delta.down { color: var(--red); }
 
-/* Checklist panel */
-.checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 2px; }
-@media (max-width: 500px) { .checklist-grid { grid-template-columns: 1fr; } }
-.checklist-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-.checklist-item-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 5px; }
-.checklist-item-val { font-size: 0.82rem; color: var(--text-2); line-height: 1.55; font-weight: 300; }
-.checklist-item-val.highlight { color: var(--gold); font-style: italic; }
-.checklist-badge { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; margin-bottom: 4px; }
-.checklist-badge.yes { color: var(--green-text); background: var(--green-soft); }
-.checklist-badge.partial { color: var(--gold); background: var(--gold-dim); }
-.checklist-badge.no { color: var(--red-text); background: var(--red-soft); }
-.checklist-badge.fresh { color: var(--green-text); background: var(--green-soft); }
-.checklist-badge.mixed { color: var(--gold); background: var(--gold-dim); }
-.checklist-badge.generic { color: var(--red-text); background: var(--red-soft); }
-.field-hint { font-size: 0.76rem; color: var(--text-3); margin-top: 5px; line-height: 1.55; font-weight: 300; }
-.field-hint strong { color: var(--text-2); font-weight: 400; }
-.field-hint code { font-family: 'DM Mono', monospace; font-size: 0.72rem; background: var(--surface-3); padding: 1px 5px; border-radius: 3px; }
+/* ── VERDICT ── */
+.verdict-block {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 24px 0;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 24px;
+}
+.verdict-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--signal);
+  padding-top: 4px;
+}
+.verdict-text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.75;
+  color: var(--text);
+}
 
-footer { text-align: center; padding: 22px; font-family: 'DM Mono', monospace; font-size: 0.61rem; letter-spacing: 0.08em; color: var(--text-3); border-top: 1px solid var(--border); }
+/* ── FLAGS ── */
+.flags-block {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 600px) { .flags-block { grid-template-columns: 1fr; } }
+.flag-cell {
+  padding: 16px;
+  border-right: 1px solid var(--line);
+}
+.flag-cell:last-child { border-right: none; }
+.flag-type {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 7px;
+  opacity: 0.8;
+}
+.flag-quote {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--red);
+  line-height: 1.5;
+}
+
+/* ── CHECKLIST ── */
+.checklist-block {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 800px) { .checklist-block { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 500px) { .checklist-block { grid-template-columns: 1fr 1fr; } }
+.checklist-cell {
+  padding: 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.checklist-cell:last-child { border-right: none; }
+.cl-label {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 6px;
+}
+.cl-val {
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.5;
+  font-weight: 300;
+}
+.cl-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  margin-bottom: 4px;
+}
+.cl-badge.yes, .cl-badge.fresh   { color: var(--green); }
+.cl-badge.partial, .cl-badge.mixed { color: var(--gold); }
+.cl-badge.no, .cl-badge.generic  { color: var(--red); }
+.cl-memorable {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--signal);
+}
+
+/* ── SECTION HEADING ── */
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 20px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.section-heading h2 {
+  font-family: var(--display);
+  font-size: 2rem;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--line-mid);
+  color: var(--text-3);
+}
+.section-tag.signal { color: var(--signal); border-color: var(--signal-line); background: var(--signal-bg); }
+.section-tag.green  { color: var(--green);  border-color: var(--green-line);  background: var(--green-bg); }
+
+/* ── MASTER REWRITER BANNER ── */
+.master-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.master-mark {
+  font-family: var(--display);
+  font-size: 1.4rem;
+  color: var(--signal);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.master-label {
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin-bottom: 2px;
+}
+.master-desc { font-size: 0.78rem; color: var(--text-2); font-weight: 300; }
+
+/* ── SURGICAL PAIRS ── */
+.rewrite-pair {
+  border-bottom: 1px solid var(--line);
+  padding: 24px 0;
+}
+.rewrite-pair:last-child { border-bottom: none; }
+
+.world-anchor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid rgba(138,108,26,0.3);
+  background: var(--gold-bg);
+  padding: 3px 8px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+.auto-repaired-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border: 1px solid var(--line-mid);
+  padding: 3px 8px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+.structural-role {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-weight: 300;
+  font-style: italic;
+  margin-bottom: 12px;
+}
+.structural-role-label {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  font-style: normal;
+  flex-shrink: 0;
+}
+.line-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.line-block { padding: 14px 16px; position: relative; }
+.line-tag {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 5px;
+}
+.line-text { font-size: 0.87rem; line-height: 1.65; }
+.line-before { background: var(--red-bg); }
+.line-before .line-tag { color: var(--red); }
+.line-before .line-text { color: var(--red); }
+.line-after  { background: var(--green-bg); }
+.line-after .line-tag  { color: var(--green); }
+.line-after .line-text { color: var(--green); }
+.line-accepted { background: rgba(30,80,200,0.06); border-left: 2px solid rgba(30,80,200,0.3); }
+.line-accepted .line-tag  { color: #3a5ab0; }
+.line-accepted .line-text { color: #2a4a9e; }
+
+.copy-line-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: rgba(10,9,8,0.04);
+  border: 1px solid var(--line-mid);
+  border-radius: 2px;
+  padding: 2px 7px;
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: all 0.15s;
+}
+.copy-line-btn:hover { background: rgba(10,9,8,0.08); color: var(--text); }
+.copy-line-btn.copied { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
+
+.why-block {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  color: var(--text-2);
+  font-style: italic;
+  line-height: 1.6;
+  margin-bottom: 10px;
+  position: relative;
+}
+.why-block::before { content: '↳ '; color: var(--signal); font-style: normal; opacity: 0.5; }
+
+.violation-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--red-bg);
+  border-left: 2px solid var(--red-line);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--red);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.syn-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--gold-bg);
+  border-left: 2px solid rgba(138,108,26,0.3);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--gold);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.rewrite-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-accept {
+  padding: 5px 13px;
+  background: transparent;
+  border: 1px solid var(--green-line);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  transition: all 0.15s;
+}
+.btn-accept:hover:not(:disabled) { background: var(--green-bg); }
+.btn-accept.accepted { background: var(--green-bg); }
+.btn-accept:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-skip {
+  padding: 5px 13px;
+  background: transparent;
+  border: 1px solid var(--line-mid);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: all 0.15s;
+}
+.btn-skip:hover:not(:disabled) { border-color: var(--line-hi); color: var(--text); }
+.btn-skip:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-regen {
+  padding: 5px 13px;
+  background: transparent;
+  border: 1px solid rgba(138,108,26,0.25);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.75;
+  transition: all 0.15s;
+}
+.btn-regen:hover:not(:disabled) { opacity: 1; background: var(--gold-bg); }
+.btn-regen:disabled { opacity: 0.25; cursor: not-allowed; }
+.syl-badge {
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  padding: 3px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  color: var(--text-3);
+}
+.syl-badge.ok   { color: var(--text-4); }
+.syl-badge.warn { color: var(--gold); border-color: rgba(138,108,26,0.3); background: var(--gold-bg); }
+.syl-badge.fail { color: var(--red); border-color: var(--red-line); background: var(--red-bg); }
+.applied-badge {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #3a5ab0;
+  border: 1px solid rgba(30,80,200,0.2);
+  background: rgba(30,80,200,0.05);
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+
+/* ── COPY ALL ── */
+.copy-all-row { display: flex; justify-content: flex-end; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.btn-copy-all {
+  padding: 6px 13px;
+  background: transparent;
+  border: 1px solid var(--line-mid);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: all 0.15s;
+}
+.btn-copy-all:hover { border-color: var(--line-hi); color: var(--text-2); }
+.btn-copy-all.copied { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
+
+/* ── ACCEPTED BUFFER ── */
+.buffer-block { display: none; border-top: 1px solid var(--line); padding: 20px 0 0; }
+.buffer-block.visible { display: block; }
+.buffer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.buffer-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: #3a5ab0; }
+.btn-copy-buf {
+  padding: 5px 11px;
+  background: transparent;
+  border: 1px solid rgba(30,80,200,0.2);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a5ab0;
+  transition: all 0.15s;
+}
+.btn-copy-buf:hover { background: rgba(30,80,200,0.06); }
+.btn-copy-buf.copied { background: rgba(30,80,200,0.1); }
+.buffer-body {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.9;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 16px;
+  border: 1px solid rgba(30,80,200,0.2);
+  border-radius: var(--radius);
+  background: rgba(30,80,200,0.04);
+}
+
+/* ── FULL REWRITE ── */
+.full-rewrite-wrap {
+  border: 1px solid var(--green-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.full-rewrite-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--green-line);
+  background: var(--green-bg);
+}
+.full-rewrite-title {
+  font-family: var(--mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.btn-copy-full {
+  padding: 5px 11px;
+  background: transparent;
+  border: 1px solid var(--green-line);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  transition: all 0.15s;
+}
+.btn-copy-full:hover { background: var(--green-bg); }
+.btn-copy-full.copied { background: var(--green-bg); }
+.full-rewrite-body {
+  padding: 20px;
+  font-family: var(--mono);
+  font-size: 0.83rem;
+  line-height: 2.0;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── ACTIONS LIST ── */
+.actions-list {
+  list-style: none;
+  counter-reset: ac;
+}
+.actions-list li {
+  counter-increment: ac;
+  display: flex;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.86rem;
+  color: var(--text-2);
+  line-height: 1.65;
+  font-weight: 300;
+  align-items: flex-start;
+}
+.actions-list li:last-child { border-bottom: none; }
+.actions-list li::before {
+  content: counter(ac, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--signal);
+  min-width: 20px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+/* ── BOTTOM ACTIONS ── */
+.bottom-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 28px 0 0;
+  border-top: 1px solid var(--line);
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+.btn-regrade {
+  padding: 11px 28px;
+  background: var(--ink);
+  border: none;
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+}
+.btn-regrade:hover { background: #1e1b17; transform: translateY(-1px); }
+.btn-reset {
+  padding: 11px 28px;
+  background: transparent;
+  border: 1px solid var(--line-mid);
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+}
+.btn-reset:hover { border-color: var(--line-hi); color: var(--text-2); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--line);
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-sig { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-4); }
+.footer-signal {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--signal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 </style>
 </head>
 <body>
 
+<div class="layout">
+
 <header>
-  <div class="eyebrow">Songwriter's Workbench</div>
-  <h1>Lyrics <em>Grader</em> <span class="version-tag">v3.8</span></h1>
-  <p>Grade, fix, iterate. Delta scoring across sessions. Accept or regenerate individual rewrites.</p>
+  <div class="header-left">
+    <div class="header-signal">
+      <span class="signal-dot"></span>
+      Songwriter's Workbench
+    </div>
+    <h1>LYRICS<br><em>Grader</em></h1>
+  </div>
+  <div class="header-right">
+    <div class="version-badge">v4.0</div>
+    <div class="header-desc">Grade. Fix. Delta-track. Accept or regenerate line by line.</div>
+  </div>
 </header>
 
 <main>
 
-  <!-- Phase 1: Input -->
-  <div class="phase active" id="phaseInput">
-    <details class="keys-panel">
-      <summary><span>API Keys</span><span class="chevron">▾</span></summary>
-      <div class="keys-inner">
-        <div class="field">
-          <label>Groq API Key <span class="sub">— grading</span></label>
-          <input type="password" id="groqKey" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
-        </div>
-        <div class="field">
-          <label>Anthropic API Key <span class="sub">— rewrites (recommended)</span></label>
-          <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
-        </div>
-        <div class="field">
-          <label>Gemini API Key <span class="sub">— fallback</span></label>
-          <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" spellcheck="false" />
-        </div>
-      </div>
-    </details>
+<!-- Phase 1: Input -->
+<div class="phase active" id="phaseInput">
 
-    <div class="onboard-hint" id="onboardHint">
-      <span class="onboard-icon">↯</span>
-      <div class="onboard-body">
-        <div class="onboard-title">Quick start</div>
-        <div class="onboard-text">
-          Paste lyrics → set genre context → press <code>Surgical Fix</code> or <strong>⌘↵</strong> to grade and rewrite.<br>
-          Use <code>[Verse 1]</code> / <code>[Chorus]</code> labels in your lyrics to unlock section targeting in Full Rewrite mode.
-        </div>
+  <details class="keys-details">
+    <summary class="keys-summary">API Keys <span class="chev">▾</span></summary>
+    <div class="keys-inner">
+      <div>
+        <div class="side-block-label">Groq — grading</div>
+        <input type="password" id="groqKey" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
       </div>
-      <button class="onboard-dismiss" id="onboardDismiss" title="Dismiss">×</button>
+      <div>
+        <div class="side-block-label">Anthropic — rewrites</div>
+        <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div>
+        <div class="side-block-label">Gemini — fallback</div>
+        <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+  </details>
+
+  <div class="input-grid">
+    <div class="lyrics-pane">
+      <div class="pane-label">
+        <span>Lyrics</span>
+        <span class="char-ct" id="charCount">0</span>
+      </div>
+      <textarea id="lyrics" placeholder="Paste your full lyrics here…&#10;&#10;Use [Verse 1] / [Chorus] labels to unlock section targeting." spellcheck="false"></textarea>
     </div>
 
-    <div class="card">
-      <div class="field">
-        <label>Genre / Theme / Context <span class="sub">— calibrates the grade</span></label>
-        <input type="text" id="context" placeholder="e.g. Dark glitch metal, dissociation, heavy on metaphor — or paste your Suno theme prompt" maxlength="1000" />
-        <div class="field-hint">Paste your <strong>Suno theme prompt</strong> directly, or write <strong>genre + emotional register + craft priority</strong>. More context = sharper grade. e.g. <em>"Dark glitch metal, AI transmission takeover, dissociation, compression over melody"</em></div>
+    <div class="side-pane">
+      <div class="side-block">
+        <div class="side-block-label">Genre / Theme / Context</div>
+        <input type="text" id="context" placeholder="Dark glitch metal, AI takeover, dissociation…" maxlength="1000" />
+        <div class="side-hint">Paste a Suno theme prompt or write genre + emotional register + craft priority. More context = sharper grade.</div>
+        <div class="section-label-hint" id="sectionLabelHint"></div>
       </div>
-      <div class="field">
-        <label>Your Lyrics</label>
-        <textarea id="lyrics" placeholder="Paste your full lyrics here…" spellcheck="false"></textarea>
-        <div class="char-row">
-          <span class="char-count" id="charCount">0 characters</span>
-          <span class="shortcut-hint" id="shortcutHint"></span>
+
+      <div class="controls-block">
+        <div class="ctrl-row">
+          <span class="ctrl-label">Lines to fix</span>
+          <select id="lineCount">
+            <option value="1">1 weakest</option>
+            <option value="2">2 weakest</option>
+            <option value="3" selected>3 weakest</option>
+            <option value="5">5 weakest</option>
+            <option value="all">All flagged</option>
+          </select>
         </div>
-        <div class="field-hint" id="sectionHint" style="display:none">Section labels detected: <span id="sectionHintList"></span> — use <strong>Full Rewrite → Select sections</strong> to target specific ones.</div>
-      </div>
-
-      <div class="mode-label">Choose mode</div>
-      <div class="btn-row">
-        <button class="btn-mode surgical" id="surgicalBtn">
-          <span class="btn-mode-title">Surgical Fix</span>
-          <span class="btn-mode-sub">Grade + rewrite the weakest lines</span>
-        </button>
-        <button class="btn-mode full" id="fullBtn">
-          <span class="btn-mode-title">Full Rewrite</span>
-          <span class="btn-mode-sub">Grade + rewrite selected sections to 10/10</span>
-        </button>
-      </div>
-
-      <button class="advanced-toggle" id="advancedToggle">
-        Advanced settings <span class="adv-chevron">▾</span>
-      </button>
-      <div class="advanced-panel" id="advancedPanel">
-        <div class="controls-row">
-          <div class="control-group">
-            <span class="control-label">Lines to fix</span>
-            <select class="control-select" id="lineCount">
-              <option value="1">1 weakest</option>
-              <option value="2">2 weakest</option>
-              <option value="3" selected>3 weakest</option>
-              <option value="5">5 weakest</option>
-              <option value="all">All flagged</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <span class="control-label">Rewrite scope</span>
-            <select class="control-select" id="rewriteScope">
-              <option value="full">Full song</option>
-              <option value="sections">Select sections</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <span class="control-label">Retries on 429</span>
-            <select class="control-select" id="retryCount">
-              <option value="0">None</option>
-              <option value="2" selected>2×</option>
-              <option value="4">4×</option>
-            </select>
-          </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Rewrite scope</span>
+          <select id="rewriteScope">
+            <option value="full">Full song</option>
+            <option value="sections">Select sections</option>
+          </select>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Retries on 429</span>
+          <select id="retryCount">
+            <option value="0">None</option>
+            <option value="2" selected>2×</option>
+            <option value="4">4×</option>
+          </select>
         </div>
         <div class="section-picker" id="sectionPicker">
-          <div class="section-picker-label">Select sections to rewrite</div>
+          <div class="ctrl-label" style="margin-bottom:6px">Sections</div>
           <div class="section-chips" id="sectionChips">
-            <span class="section-chip section-chip-all selected" data-section="all" id="allSectionsChip">All Sections</span>
+            <span class="section-chip selected" data-section="all" id="allSectionsChip">All</span>
           </div>
         </div>
       </div>
 
-      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      <div class="action-pane">
+        <button class="btn-primary" id="surgicalBtn">
+          <span>Surgical Fix</span>
+          <span class="btn-sub">Grade + rewrite weakest lines</span>
+        </button>
+        <button class="btn-secondary" id="fullBtn">
+          <span>Full Rewrite</span>
+          <span class="btn-sub" style="font-size:.55rem;opacity:.5;letter-spacing:.1em;text-transform:none;font-style:italic">Grade + rewrite to 10/10</span>
+        </button>
+        <button class="btn-cancel-sm" id="cancelBtn">✕ Cancel</button>
+      </div>
     </div>
   </div>
 
-  <!-- Phase 2: Results -->
-  <div class="phase" id="phaseResults">
+</div>
 
-    <div class="delta-banner" id="deltaBanner"></div>
-    <div class="partial-notice" id="partialNotice"></div>
-    <div class="partial-notice" id="repairNotice"></div>
+<!-- Phase 2: Results -->
+<div class="phase" id="phaseResults">
 
-    <div class="history-row" id="historyRow" style="display:none">
-      <span class="history-label" id="historyLabel"></span>
-      <button class="btn-history" id="historyToggleBtn">Session History</button>
+  <div class="results-head">
+    <div>
+      <div class="results-song-label">Context</div>
+      <div class="results-context-text" id="resultsContext">—</div>
     </div>
-    <div class="history-panel" id="historyPanel"></div>
-
-    <div class="section">
-      <div class="grade-hd">
-        <div class="grade-hd-left">
-          <h2>Your Grade</h2>
-          <div class="model-tag" id="modelTag"></div>
-        </div>
-        <div class="overall-block">
-          <div><span class="overall-num" id="overallNum">—</span><span class="overall-denom">/10</span></div>
-          <div class="overall-lbl">Overall</div>
-          <div class="overall-delta" id="overallDelta"></div>
-        </div>
-      </div>
-      <div class="score-grid" id="scoreGrid"></div>
-      <p class="verdict-body" id="verdictText"></p>
-      <div class="flags-block" id="primaryFlags"></div>
+    <div class="grade-block">
+      <div class="grade-num" id="overallNum">—</div>
+      <div class="grade-denom">/10 overall</div>
+      <div class="grade-model" id="modelTag"></div>
+      <div class="grade-delta" id="overallDelta"></div>
     </div>
+  </div>
 
-    <div class="section" id="checklistSection">
-      <div class="sec-hd"><h3>Song Checklist</h3><span class="sec-tag">5 Questions</span></div>
-      <div class="checklist-grid" id="checklistGrid"></div>
+  <div class="delta-bar" id="deltaBanner"></div>
+  <div class="notice" id="partialNotice"></div>
+  <div class="notice" id="repairNotice"></div>
+
+  <div class="history-row" id="historyRow">
+    <span class="history-label" id="historyLabel"></span>
+    <button class="btn-hist" id="historyToggleBtn">Session History</button>
+  </div>
+  <div class="history-panel" id="historyPanel"></div>
+
+  <div class="score-grid" id="scoreGrid"></div>
+
+  <div class="verdict-block">
+    <div class="verdict-eyebrow">Verdict</div>
+    <div class="verdict-text" id="verdictText"></div>
+  </div>
+
+  <div class="flags-block" id="primaryFlags"></div>
+
+  <div id="checklistBlock" class="checklist-block"></div>
+
+  <!-- Surgical -->
+  <div id="surgicalSection" style="display:none">
+    <div class="section-heading">
+      <h2>SURGICAL FIXES</h2>
+      <span class="section-tag signal" id="surgicalCountTag">—</span>
     </div>
-
-    <div class="section" id="surgicalSection" style="display:none">
-      <div class="sec-hd">
-        <h3>Surgical Fixes</h3>
-        <span class="sec-tag" id="surgicalCountTag">—</span>
-      </div>
-      <div class="master-intro">
-        <div class="master-icon">✦</div>
-        <div>
-          <div class="master-label">World-Class Master Rewriter</div>
-          <div class="master-desc" id="surgicalMasterDesc">Weakest lines rewritten using the song's own imagery.</div>
-        </div>
-      </div>
-      <div class="copy-all-row">
-        <button class="btn-copy-all" id="copyAllBtn">Copy All Rewrites</button>
-      </div>
-      <div id="rewriteResultsList"></div>
-
-      <div class="accepted-buffer" id="acceptedBuffer">
-        <div class="accepted-buffer-header">
-          <span>Applied lyrics</span>
-          <button class="btn-copy-buffer" id="copyBufferBtn">Copy</button>
-        </div>
-        <div class="accepted-buffer-body" id="acceptedBufferBody"></div>
+    <div class="master-banner">
+      <div class="master-mark">✦</div>
+      <div>
+        <div class="master-label">World-Class Master Rewriter</div>
+        <div class="master-desc" id="surgicalMasterDesc">Weakest lines rewritten using the song's own imagery.</div>
       </div>
     </div>
+    <div class="copy-all-row">
+      <button class="btn-copy-all" id="copyAllBtn">Copy All Rewrites</button>
+    </div>
+    <div id="rewriteResultsList"></div>
+    <div class="buffer-block" id="acceptedBuffer">
+      <div class="buffer-head">
+        <span class="buffer-label">Applied Lyrics</span>
+        <button class="btn-copy-buf" id="copyBufferBtn">Copy</button>
+      </div>
+      <div class="buffer-body" id="acceptedBufferBody"></div>
+    </div>
+  </div>
 
-    <div class="section" id="fullSection" style="display:none">
-      <div class="sec-hd">
-        <h3>Full Song Rewrite</h3>
-        <span class="sec-tag green" id="fullScopeTag">Full Song</span>
-      </div>
-      <div class="master-intro">
-        <div class="master-icon">✦</div>
-        <div>
-          <div class="master-label">World-Class Master Rewriter</div>
-          <div class="master-desc" id="fullMasterDesc">Every weak line elevated. Strong lines preserved. Same world, sharper language.</div>
-        </div>
-      </div>
-      <div class="full-rewrite-block">
-        <div class="full-rewrite-header">
-          <span class="full-rewrite-title">Rewritten Song</span>
-          <button class="btn-copy-full" id="copyFullBtn">Copy Full Song</button>
-        </div>
-        <div class="full-rewrite-body" id="fullRewriteBody"></div>
+  <!-- Full -->
+  <div id="fullSection" style="display:none">
+    <div class="section-heading">
+      <h2>FULL REWRITE</h2>
+      <span class="section-tag green" id="fullScopeTag">Full Song</span>
+    </div>
+    <div class="master-banner">
+      <div class="master-mark">✦</div>
+      <div>
+        <div class="master-label">World-Class Master Rewriter</div>
+        <div class="master-desc" id="fullMasterDesc">Every weak line elevated. Strong lines preserved. Same world, sharper language.</div>
       </div>
     </div>
-
-    <div class="section">
-      <div class="sec-hd"><h3>Notes to Reach 10/10</h3><span class="sec-tag">Action</span></div>
-      <ol class="action-list" id="actionList"></ol>
+    <div class="full-rewrite-wrap">
+      <div class="full-rewrite-head">
+        <span class="full-rewrite-title">Rewritten Song</span>
+        <button class="btn-copy-full" id="copyFullBtn">Copy Full Song</button>
+      </div>
+      <div class="full-rewrite-body" id="fullRewriteBody"></div>
     </div>
+  </div>
 
+  <!-- Actions -->
+  <div>
+    <div class="section-heading">
+      <h2>NOTES TO 10/10</h2>
+      <span class="section-tag">Action</span>
+    </div>
+    <ol class="actions-list" id="actionList"></ol>
+  </div>
+
+  <div class="bottom-actions">
     <button class="btn-regrade" id="regradeBtn">↺ Regrade This Song</button>
     <button class="btn-reset" id="resetBtn">← Grade Another Song</button>
   </div>
 
-  <div class="status-bar" id="statusBar" aria-live="polite">
-    <div class="spinner"></div>
-    <span class="status-text" id="statusText">Analysing…</span>
-    <span class="status-step" id="statusStep" style="display:none"></span>
-    <span class="status-attempt" id="statusAttempt"></span>
-  </div>
-  <div class="error-box" id="errorBox" role="alert"></div>
+</div>
+
+<!-- Global status/error -->
+<div class="status-bar" id="statusBar" aria-live="polite">
+  <div class="spinner"></div>
+  <span id="statusText">Analysing…</span>
+  <span class="status-step" id="statusStep" style="display:none"></span>
+  <span class="status-attempt" id="statusAttempt"></span>
+</div>
+<div class="error-box" id="errorBox" role="alert"></div>
 
 </main>
 
-<footer>Lyrics Grader v3.8 · Seven-dimension rubric · Groq + Gemini fallback · Nothing stored</footer>
+<footer>
+  <div class="footer-sig">Lyrics Grader v4.0 · Seven-dimension rubric · Nothing stored</div>
+  <div class="footer-signal"><span class="signal-dot"></span> Frequency active</div>
+</footer>
+
+</div><!-- /layout -->
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
-// Fix #12: model string and display name now match
-const GEMINI_MODEL      = 'gemini-2.0-flash';
+const GEMINI_MODEL       = 'gemini-2.0-flash';
 const GEMINI_MODEL_LABEL = 'Gemini 2.0 Flash';
-// v3.8: Claude Sonnet as primary rewriter when Anthropic key is present
 const CLAUDE_REWRITE_MODEL       = 'claude-sonnet-4-6';
 const CLAUDE_REWRITE_MODEL_LABEL = 'Claude Sonnet 4.6';
-const TIMEOUT_MS        = 52000;   // grade pass (Groq — fast)
-const TIMEOUT_MS_CLAUDE = 120000;  // rewrite pass (Claude Sonnet — slower, complex prompt)
+const TIMEOUT_MS        = 52000;
+const TIMEOUT_MS_CLAUDE = 120000;
 const RETRY_DELAY  = 1400;
-// Fix #11: cap session history to avoid sessionStorage overflow
 const MAX_HISTORY  = 20;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// App state
+// State
 // ─────────────────────────────────────────────────────────────────────────────
 let controller = null;
 let appState = {
   gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical',
-  ctx: '', lyrics: '', acceptedRewrites: {},
-  gradeHistory: [],
+  ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: [],
   parsedSections: [], selectedSections: []
 };
 
@@ -672,7 +1428,6 @@ function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 }
 
-// Fix #9: sanitize with sentence-boundary truncation
 function sanitizeForPrompt(s, maxLen = 1000) {
   s = String(s ?? '').replace(/[`\\]/g, ' ').trim();
   if (s.length <= maxLen) return s;
@@ -680,28 +1435,19 @@ function sanitizeForPrompt(s, maxLen = 1000) {
   return s.slice(0, cut > 0 ? cut : maxLen) + '…';
 }
 
-// Fix #3: robust JSON extraction — handles prose preamble before fence
 function extractJSON(raw) {
-  // Try to extract from a markdown fence first
   const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (fenceMatch) return fenceMatch[1].trim();
-  // Fallback: find the first { or [ and return from there
   const start = raw.search(/[{[]/);
   if (start !== -1) return raw.slice(start).trim();
   return raw.trim();
 }
 
-// Fix #1: compute weighted overall score in JS, don't trust model arithmetic
-// Weights: Emotional Specificity (×2), Imagery (×1), Concept & Cohesion (×2),
-//          Compression (×1), Prosody (×1), Originality (×1), Memorability (×1)
 const DIM_WEIGHTS = [2, 1, 2, 1, 1, 1, 1];
 function computeOverall(dimensions) {
   if (!dimensions || !dimensions.length) return null;
   const totalWeight = DIM_WEIGHTS.reduce((a, b) => a + b, 0);
-  const weighted = dimensions.reduce((sum, dim, i) => {
-    const w = DIM_WEIGHTS[i] ?? 1;
-    return sum + (dim.score * w);
-  }, 0);
+  const weighted = dimensions.reduce((sum, dim, i) => sum + (dim.score * (DIM_WEIGHTS[i] ?? 1)), 0);
   return +(weighted / totalWeight).toFixed(1);
 }
 
@@ -709,11 +1455,10 @@ function computeOverall(dimensions) {
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-$('shortcutHint').textContent = isMac ? '⌘↵ = surgical' : 'Ctrl+↵ = surgical';
 
 $('lyrics').addEventListener('input', () => {
   const n = $('lyrics').value.length;
-  $('charCount').textContent = `${n.toLocaleString()} character${n !== 1 ? 's' : ''}`;
+  $('charCount').textContent = `${n.toLocaleString()} ch`;
   parseSectionsFromInput();
 });
 
@@ -724,13 +1469,10 @@ $('lyrics').addEventListener('keydown', e => {
   }
 });
 
-// Attach all button listeners once — no onclick attributes
 $('surgicalBtn').addEventListener('click', () => startGrade('surgical'));
 $('fullBtn').addEventListener('click', () => startGrade('full'));
 $('cancelBtn').addEventListener('click', cancelRequest);
-$('advancedToggle').addEventListener('click', toggleAdvanced);
 $('rewriteScope').addEventListener('change', handleScopeChange);
-$('onboardDismiss').addEventListener('click', dismissHint);
 $('historyToggleBtn').addEventListener('click', toggleHistory);
 $('regradeBtn').addEventListener('click', regradeFromResults);
 $('resetBtn').addEventListener('click', resetAll);
@@ -739,7 +1481,6 @@ $('copyFullBtn').addEventListener('click', copyFullSong);
 $('copyBufferBtn').addEventListener('click', copyBuffer);
 $('allSectionsChip').addEventListener('click', toggleSectionAll);
 
-// Init persisted keys
 (function initKeys() {
   try {
     const gk = localStorage.getItem('lg_groq'), mk = localStorage.getItem('lg_gemini'), ak = localStorage.getItem('lg_anthropic');
@@ -748,36 +1489,13 @@ $('allSectionsChip').addEventListener('click', toggleSectionAll);
     if (ak) $('anthropicKey').value = ak;
   } catch(_) {}
 })();
-$('groqKey').addEventListener('input',       e => { try { localStorage.setItem('lg_groq',       e.target.value); } catch(_){} });
-$('geminiKey').addEventListener('input',     e => { try { localStorage.setItem('lg_gemini',     e.target.value); } catch(_){} });
-$('anthropicKey').addEventListener('input',  e => { try { localStorage.setItem('lg_anthropic',  e.target.value); } catch(_){} });
+$('groqKey').addEventListener('input',      e => { try { localStorage.setItem('lg_groq',      e.target.value); } catch(_){} });
+$('geminiKey').addEventListener('input',    e => { try { localStorage.setItem('lg_gemini',    e.target.value); } catch(_){} });
+$('anthropicKey').addEventListener('input', e => { try { localStorage.setItem('lg_anthropic', e.target.value); } catch(_){} });
 
-// Init session history
 (function initHistory() {
-  try {
-    const h = sessionStorage.getItem('lg_history');
-    if (h) appState.gradeHistory = JSON.parse(h);
-  } catch(_) {}
+  try { const h = sessionStorage.getItem('lg_history'); if (h) appState.gradeHistory = JSON.parse(h); } catch(_) {}
 })();
-
-// Init onboard dismiss state
-(function initOnboard() {
-  try {
-    if (localStorage.getItem('lg_onboard_dismissed') === '1') {
-      $('onboardHint').classList.add('hidden');
-    }
-  } catch(_) {}
-})();
-
-function dismissHint() {
-  $('onboardHint').classList.add('hidden');
-  try { localStorage.setItem('lg_onboard_dismissed', '1'); } catch(_) {}
-}
-
-function toggleAdvanced() {
-  $('advancedToggle').classList.toggle('open');
-  $('advancedPanel').classList.toggle('open');
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Section parsing
@@ -793,39 +1511,32 @@ function parseSectionsFromInput() {
   const sections = parseSections(text);
   appState.parsedSections = sections;
   renderSectionChips(sections);
-
-  const hintEl = $('sectionHint');
-  const listEl = $('sectionHintList');
+  const hint = $('sectionLabelHint');
   if (sections.length) {
-    listEl.textContent = sections.map(s => `[${s}]`).join(', ');
-    hintEl.style.display = '';
+    hint.textContent = `Labels: ${sections.map(s => `[${s}]`).join(', ')}`;
+    hint.classList.add('visible');
   } else {
-    hintEl.style.display = 'none';
+    hint.classList.remove('visible');
   }
 }
 
 function renderSectionChips(sections) {
   const container = $('sectionChips');
-  const scope = $('rewriteScope').value;
-  if (scope !== 'sections') return;
-
+  if ($('rewriteScope').value !== 'sections') return;
   container.innerHTML = '';
-
   const allChip = document.createElement('span');
-  allChip.className = 'section-chip section-chip-all' + (appState.selectedSections.length === 0 ? ' selected' : '');
+  allChip.className = 'section-chip' + (!appState.selectedSections.length ? ' selected' : '');
   allChip.dataset.section = 'all';
-  allChip.textContent = 'All Sections';
+  allChip.textContent = 'All';
   allChip.addEventListener('click', toggleSectionAll);
   container.appendChild(allChip);
-
   if (!sections.length) {
     const note = document.createElement('span');
-    note.style.cssText = 'font-family:DM Mono,monospace;font-size:.62rem;color:var(--text-3);padding:5px 0';
-    note.textContent = 'No section labels found in lyrics';
+    note.style.cssText = 'font-family:var(--mono);font-size:.6rem;color:var(--text-4)';
+    note.textContent = 'No labels found';
     container.appendChild(note);
     return;
   }
-
   sections.forEach(s => {
     const chip = document.createElement('span');
     chip.className = 'section-chip' + (appState.selectedSections.includes(s) ? ' selected' : '');
@@ -836,33 +1547,21 @@ function renderSectionChips(sections) {
   });
 }
 
-function toggleSectionAll() {
-  appState.selectedSections = [];
-  renderSectionChips(appState.parsedSections);
-}
-
+function toggleSectionAll() { appState.selectedSections = []; renderSectionChips(appState.parsedSections); }
 function toggleSection(name) {
   const idx = appState.selectedSections.indexOf(name);
   if (idx === -1) appState.selectedSections.push(name);
   else appState.selectedSections.splice(idx, 1);
   renderSectionChips(appState.parsedSections);
 }
-
 function handleScopeChange() {
   const scope = $('rewriteScope').value;
-  const picker = $('sectionPicker');
-  if (scope === 'sections') {
-    picker.classList.add('visible');
-    parseSectionsFromInput();
-  } else {
-    picker.classList.remove('visible');
-  }
+  if (scope === 'sections') { $('sectionPicker').classList.add('visible'); parseSectionsFromInput(); }
+  else $('sectionPicker').classList.remove('visible');
 }
-
 function extractSections(lyrics, sections) {
   if (!sections || !sections.length) return lyrics;
-  const lines = lyrics.split('\n');
-  const result = [];
+  const lines = lyrics.split('\n'), result = [];
   let inTarget = false;
   lines.forEach(line => {
     const m = line.match(/^\[([^\]]+)\]/);
@@ -880,18 +1579,15 @@ function showPhase(name) {
   $(name).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
 function setStatus(text, step, attempt) {
   const bar = $('statusBar');
   if (!text) { bar.classList.remove('active'); return; }
   bar.classList.add('active');
   $('statusText').textContent = text;
   const stepEl = $('statusStep');
-  if (step) { stepEl.textContent = step; stepEl.style.display = ''; }
-  else { stepEl.style.display = 'none'; }
+  if (step) { stepEl.textContent = step; stepEl.style.display = ''; } else { stepEl.style.display = 'none'; }
   $('statusAttempt').textContent = attempt || '';
 }
-
 function showError(msg, details) {
   const box = $('errorBox');
   box.innerHTML = `<strong>Error:</strong> ${esc(msg)}${details ? `<div class="error-detail">${esc(details)}</div>` : ''}`;
@@ -899,21 +1595,12 @@ function showError(msg, details) {
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function clearError() { $('errorBox').classList.remove('active'); }
-
-function showPartialNotice(msg) {
-  const el = $('partialNotice');
-  el.textContent = msg;
-  el.classList.add('active');
-}
-function clearPartialNotice() { $('partialNotice').classList.remove('active'); }
-
 function setBusy(on) {
   $('surgicalBtn').disabled = on;
   $('fullBtn').disabled     = on;
   $('cancelBtn').classList.toggle('visible', on);
   if (!on) setStatus('');
 }
-
 function cancelRequest() {
   if (controller) { controller.abort('user_cancel'); controller = null; }
   setBusy(false); clearError();
@@ -924,16 +1611,10 @@ function cancelRequest() {
 // ─────────────────────────────────────────────────────────────────────────────
 function fetchWithTimeout(url, opts, signal, timeoutMs = TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
-    const t = setTimeout(
-      () => reject(Object.assign(new Error('Request timed out — check your connection.'), { name: 'TimeoutError' })),
-      timeoutMs
-    );
-    fetch(url, { ...opts, signal })
-      .then(r => { clearTimeout(t); resolve(r); })
-      .catch(e => { clearTimeout(t); reject(e); });
+    const t = setTimeout(() => reject(Object.assign(new Error('Request timed out.'), { name: 'TimeoutError' })), timeoutMs);
+    fetch(url, { ...opts, signal }).then(r => { clearTimeout(t); resolve(r); }).catch(e => { clearTimeout(t); reject(e); });
   });
 }
-
 async function fetchRetry(url, opts, signal, maxRetries, timeoutMs = TIMEOUT_MS) {
   let attempt = 0;
   while (true) {
@@ -949,100 +1630,55 @@ async function fetchRetry(url, opts, signal, maxRetries, timeoutMs = TIMEOUT_MS)
     });
   }
 }
-
 async function callGroq(key, prompt, modelIdx, signal, retries, temp) {
   const res = await fetchRetry(
     'https://api.groq.com/openai/v1/chat/completions',
-    { method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: GROQ_MODELS[modelIdx], temperature: temp, max_tokens: 3600, messages: [{ role: 'user', content: prompt }] }) },
     signal, retries
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw Object.assign(new Error(err?.error?.message || `Groq ${res.status}`), { status: res.status });
-  }
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Groq ${res.status}`), { status: res.status }); }
   const data = await res.json();
   return { text: data.choices[0].message.content, model: GROQ_MODELS[modelIdx] };
 }
-
 async function callGemini(key, prompt, signal, retries, temp) {
   const res = await fetchRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
-    { method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: temp, maxOutputTokens: 3600 } }) },
     signal, retries
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw Object.assign(new Error(err?.error?.message || `Gemini ${res.status}`), { status: res.status });
-  }
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Gemini ${res.status}`), { status: res.status }); }
   const data = await res.json();
-  // Fix #12: label matches the actual model string
   return { text: data.candidates[0].content.parts[0].text, model: GEMINI_MODEL_LABEL };
 }
-
 async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
   const errors = [];
   if (keys.groq) {
     for (let i = 0; i < GROQ_MODELS.length; i++) {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
       try { return await callGroq(keys.groq, prompt, i, signal, retries, temp); }
-      catch(e) {
-        if (e.name === 'AbortError') throw e;
-        errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`);
-        if (e.status === 401 || e.status === 403) break;
-      }
+      catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`); if (e.status === 401 || e.status === 403) break; }
     }
   }
   if (keys.gemini && !signal.aborted) {
     try { return await callGemini(keys.gemini, prompt, signal, retries, temp); }
-    catch(e) {
-      if (e.name === 'AbortError') throw e;
-      errors.push(`Gemini: ${e.message}`);
-    }
+    catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Gemini: ${e.message}`); }
   }
   throw new Error(errors[errors.length - 1] || 'No API available', { cause: errors.join(' | ') });
 }
-
-// v3.8: Claude Sonnet via Anthropic API — primary rewriter
 async function callClaude(key, prompt, signal, retries, temp) {
   const res = await fetchRetry(
     'https://api.anthropic.com/v1/messages',
     { method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: CLAUDE_REWRITE_MODEL,
-        max_tokens: 4000,
-        temperature: temp,
-        messages: [{ role: 'user', content: prompt }]
-      }) },
-    signal, retries, TIMEOUT_MS_CLAUDE  // longer timeout — Sonnet is slower than Groq
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: CLAUDE_REWRITE_MODEL, max_tokens: 4000, temperature: temp, messages: [{ role: 'user', content: prompt }] }) },
+    signal, retries, TIMEOUT_MS_CLAUDE
   );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw Object.assign(
-      new Error(err?.error?.message || `Anthropic ${res.status}`),
-      { status: res.status }
-    );
-  }
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Anthropic ${res.status}`), { status: res.status }); }
   const data = await res.json();
-  const text = data.content
-    .filter(b => b.type === 'text')
-    .map(b => b.text)
-    .join('');
-  return { text, model: CLAUDE_REWRITE_MODEL_LABEL };
+  return { text: data.content.filter(b => b.type === 'text').map(b => b.text).join(''), model: CLAUDE_REWRITE_MODEL_LABEL };
 }
-
-// v3.8: Rewrite-specific API router.
-// Prefers Claude Sonnet (best instruction-following for complex constraints).
-// Falls back to Groq then Gemini if Anthropic key absent or fails.
 async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
   const errors = [];
   if (keys.anthropic) {
@@ -1051,18 +1687,11 @@ async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
     catch(e) {
       if (e.name === 'AbortError') throw e;
       errors.push(`Claude: ${e.message}`);
-      if (e.status === 401 || e.status === 403) {
-        // Bad key — don't fall through silently, surface it
-        throw new Error(`Anthropic key error: ${e.message}`);
-      }
+      if (e.status === 401 || e.status === 403) throw new Error(`Anthropic key error: ${e.message}`);
     }
   }
-  // Fallback to Groq + Gemini
   try { return await callAPI(keys, prompt, signal, retries, temp); }
-  catch(e) {
-    if (e.name === 'AbortError') throw e;
-    errors.push(e.message);
-  }
+  catch(e) { if (e.name === 'AbortError') throw e; errors.push(e.message); }
   throw new Error(errors[errors.length - 1] || 'No rewrite API available', { cause: errors.join(' | ') });
 }
 
@@ -1070,7 +1699,6 @@ async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
 // Parsers
 // ─────────────────────────────────────────────────────────────────────────────
 function parseGrade(text) {
-  // Fix #3: use robust extraction
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.dimensions) || !d.dimensions.length) throw new Error('Missing dimensions');
   if (typeof d.verdict !== 'string') throw new Error('Missing verdict');
@@ -1078,32 +1706,22 @@ function parseGrade(text) {
   if (!Array.isArray(d.actions)) throw new Error('Missing actions');
   if (!d.primary_flags) d.primary_flags = {};
   if (!d.checklist) d.checklist = {};
-  // Fix #1: compute overall from dimensions in JS, ignore model's arithmetic
   d.overall = computeOverall(d.dimensions);
   return d;
 }
 
 function parseRewrites(text) {
-  // Fix #3: use robust extraction
   const d = JSON.parse(extractJSON(text));
   if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
 
-  // v3.8: Syllable counter — used as the AUTHORITATIVE source for badge/pass-fail.
-  // The model's breakdown integers are treated as scaffolding only; they are often
-  // fabricated to support a false PASS claim. We count independently from the
-  // actual before/after strings and override the model's verdict when they conflict.
   function countSyllables(str) {
     if (!str || typeof str !== 'string') return null;
     return str.trim().split(/\s+/).reduce((total, rawWord) => {
       const w = rawWord.toLowerCase().replace(/[^a-z']/g, '').replace(/'/g, '');
       if (!w) return total;
-      // Greedy vowel group count
       let n = (w.match(/[aeiouy]+/g) || []).length;
-      // Strip silent terminal -e (but not -le, -ee, -oe endings which are voiced)
       if (w.length > 2 && w.endsWith('e') && !w.endsWith('le') && !w.endsWith('ee') && !w.endsWith('oe') && n > 1) n--;
-      // Common two-syllable suffixes often undercounted: -tion, -sion, -cion
       if (/[ts]ion$/.test(w)) n = Math.max(n, 2);
-      // -ious, -eous, -ual, -iel get an extra count
       if (/(ious|eous|ual|iel)$/.test(w)) n++;
       return total + Math.max(1, n);
     }, 0);
@@ -1112,85 +1730,55 @@ function parseRewrites(text) {
   return d.rewrites
     .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
     .map(r => {
-      // Count directly from actual text — independent of model's breakdown claim
-      const orig = countSyllables(r.before);
-      const rew  = countSyllables(r.after);
+      const orig  = countSyllables(r.before);
+      const rew   = countSyllables(r.after);
       const delta = (orig !== null && rew !== null) ? rew - orig : null;
-
       const adjRaw   = typeof r.adjacency_violations === 'string' ? r.adjacency_violations.trim() : '';
       const adjClear = adjRaw.toUpperCase() === 'CLEAR' || adjRaw === '';
-
-      const vtRaw   = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
-      const vtClear = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
-
-      // Synonym/domain check — v3.8 prompt uses domain_shift field instead of synonym_check
-      // Accept either field; treat domain_shift presence as CLEAR (it means model shifted domains)
+      const vtRaw    = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
+      const vtClear  = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
       const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim()
-                     : typeof r.domain_shift  === 'string' ? '' // domain_shift = already shifted, no warning needed
-                     : '';
+                     : typeof r.domain_shift  === 'string' ? '' : '';
       const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '' ||
                        (typeof r.domain_shift === 'string' && r.domain_shift.trim() !== '');
-
-      // Pass/fail purely from our counter — model's syllable_violations field ignored
-      // for badge rendering (it's still in the JSON but we don't trust it)
-      const sylPassEffective = delta === null || Math.abs(delta) <= 1;
-
-      // Client-side adjacency check (v3.8): parse Step B words from adjacency_check
-      // field and test them against the actual after string. Catches cases where the
-      // model falsely asserts CLEAR without checking its candidate.
+      const sylPass = delta === null || Math.abs(delta) <= 1;
       const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
       let clientAdjViolation = '';
       if (adjClear && adjCheckRaw) {
-        // Extract Step B content: everything between "STEP B:" and "STEP C:"
         const stepBMatch = adjCheckRaw.match(/STEP\s*B[:\s]+(.+?)(?:STEP\s*C|$)/is);
         if (stepBMatch) {
-          const stepBWords = stepBMatch[1]
-            .toLowerCase()
-            .split(/[\s,;|/\-—–]+/)
-            .map(w => w.replace(/[^a-z]/g, ''))
-            .filter(w => w.length > 2); // skip short function words
-          const afterLower = r.after.toLowerCase();
-          const afterWords = afterLower.split(/\s+/).map(w => w.replace(/[^a-z]/g, ''));
+          const stepBWords = stepBMatch[1].toLowerCase().split(/[\s,;|/\-—–]+/).map(w => w.replace(/[^a-z]/g, '')).filter(w => w.length > 2);
+          const afterWords = r.after.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z]/g, ''));
           for (const banned of stepBWords) {
-            if (afterWords.includes(banned)) {
-              clientAdjViolation = `"${banned}" found in rewrite but listed as neighbour word`;
-              break;
-            }
+            if (afterWords.includes(banned)) { clientAdjViolation = `"${banned}" found in rewrite but listed as neighbour word`; break; }
           }
         }
       }
-
       const finalAdjClear = adjClear && !clientAdjViolation;
-
       return {
-        before:              r.before,
-        after:               r.after,
-        world_anchor:        r.world_anchor    || '',
-        why:                 r.why             || '',
-        structural_role:     r.structural_role || '',
-        adjacency_clear:     finalAdjClear,
+        before: r.before, after: r.after,
+        world_anchor: r.world_anchor || '', why: r.why || '',
+        structural_role: r.structural_role || '',
+        adjacency_clear: finalAdjClear,
         adjacency_violation: finalAdjClear ? '' : (clientAdjViolation || adjRaw),
-        syllable_pass:       sylPassEffective,
-        syllable_violation:  sylPassEffective ? '' : `client count: original ${orig}, rewrite ${rew}`,
-        verbatim_clear:      vtClear,
-        verbatim_violation:  vtClear ? '' : vtRaw,
-        synonym_clear:       synClear,
-        synonym_violation:   synClear ? '' : synRaw,
-        auto_repaired:       r.auto_repaired || false,
-        syllable_delta:      delta
+        syllable_pass: sylPass,
+        syllable_violation: sylPass ? '' : `client count: original ${orig}, rewrite ${rew}`,
+        verbatim_clear: vtClear, verbatim_violation: vtClear ? '' : vtRaw,
+        synonym_clear: synClear, synonym_violation: synClear ? '' : synRaw,
+        auto_repaired: r.auto_repaired || false,
+        syllable_delta: delta
       };
     });
 }
 
 function parseFullRewrite(text) {
-  // Fix #3: use robust extraction
   const d = JSON.parse(extractJSON(text));
   if (typeof d.rewritten_song !== 'string') throw new Error('Missing rewritten_song');
   return d.rewritten_song;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Prompts
+// Prompts (unchanged from v3.8)
 // ─────────────────────────────────────────────────────────────────────────────
 function buildGradePrompt(ctx, lyrics) {
   return `You are a professional songwriter, A&R consultant, and lyric critic with 30+ years across rock, alternative, metal, and electronic genres. You evaluate lyrics with surgical honesty. You never soften feedback. You cite specific lines.
@@ -1240,41 +1828,34 @@ GRADING RUBRIC — seven dimensions, each scored 1–10:
    Test: What line from this song will you remember in a week?
 
 SCORE THRESHOLDS:
-7/10 — Solid, competent, emotionally understandable. Some good lines. Also some filler or clichés. Wouldn't skip it, wouldn't study it.
-9/10 — Professionally elite. Strong concept, vivid specifics, emotional precision, memorable phrasing. Maybe 1–2 weaker lines.
-10/10 — Rare. Every line feels necessary, specific, original, and unified. Says something people feel but couldn't articulate. No weak lines. No wasted space.
+7/10 — Solid, competent. Some good lines, some filler. Wouldn't skip, wouldn't study.
+9/10 — Professionally elite. Strong concept, vivid specifics, emotional precision. Maybe 1–2 weaker lines.
+10/10 — Rare. Every line feels necessary, specific, original, unified.
 
 PRIMARY FAILURE MODES (flag the single worst instance of each):
-- SHOW VS TELL: The most abstract emotional statement — states feeling instead of showing it through image.
-- INTERCHANGEABLE: The most replaceable line — no fingerprint, could appear in any song.
-- FILLER: The weakest line for compression — words that add length but not meaning.
+- SHOW VS TELL: The most abstract emotional statement.
+- INTERCHANGEABLE: The most replaceable line — no fingerprint.
+- FILLER: The weakest line for compression.
 
-Song context / theme prompt (use this to calibrate genre, emotional register, and intended craft priorities): "${ctx || 'None provided'}"
+Song context: "${ctx || 'None provided'}"
 
 LYRICS:
 ---
 ${lyrics}
 ---
 
-After scoring, run this five-question checklist:
-1. What is this song about in one sentence?
-2. Does every section (verse, chorus, bridge) support that central idea?
-3. Are the images fresh, specific, and emotionally loaded — or are some generic?
-4. Do stressed syllables land naturally, or do some lines fight their own meter?
-5. Which single line would you remember after one listen?
-
 Respond ONLY with valid JSON, no markdown:
 
 {
-  "overall": <1–10 one decimal — your holistic assessment, Emotional Specificity and Concept Cohesion should weigh heaviest>,
+  "overall": <1–10 one decimal>,
   "dimensions": [
-    { "label": "Emotional Specificity",      "score": <1–10>, "note": "<1–2 sentences — cite the most and least specific line>" },
-    { "label": "Imagery & Visual Language",  "score": <1–10>, "note": "<1–2 sentences — name the strongest and weakest image>" },
-    { "label": "Concept & Cohesion",         "score": <1–10>, "note": "<1–2 sentences — does the song make a complete argument?>" },
-    { "label": "Compression & Subtext",      "score": <1–10>, "note": "<1–2 sentences — where is meaning dense, where is it thin?>" },
-    { "label": "Prosody & Flow",             "score": <1–10>, "note": "<1–2 sentences — name a line that fights its meter and one that nails it>" },
-    { "label": "Originality & Authenticity", "score": <1–10>, "note": "<1–2 sentences — does this feel lived-in or assembled?>" },
-    { "label": "Memorability",               "score": <1–10>, "note": "<1–2 sentences — the single stickiest line, and what makes it stick>" }
+    { "label": "Emotional Specificity",      "score": <1–10>, "note": "<1–2 sentences>" },
+    { "label": "Imagery & Visual Language",  "score": <1–10>, "note": "<1–2 sentences>" },
+    { "label": "Concept & Cohesion",         "score": <1–10>, "note": "<1–2 sentences>" },
+    { "label": "Compression & Subtext",      "score": <1–10>, "note": "<1–2 sentences>" },
+    { "label": "Prosody & Flow",             "score": <1–10>, "note": "<1–2 sentences>" },
+    { "label": "Originality & Authenticity", "score": <1–10>, "note": "<1–2 sentences>" },
+    { "label": "Memorability",               "score": <1–10>, "note": "<1–2 sentences>" }
   ],
   "primary_flags": {
     "show_vs_tell": "<most abstract telling line verbatim, or 'none'>",
@@ -1283,14 +1864,14 @@ Respond ONLY with valid JSON, no markdown:
   },
   "checklist": {
     "central_idea": "<one sentence: what this song is about>",
-    "cohesion": "<yes/partial/no — does every section serve the central idea?>",
+    "cohesion": "<yes/partial/no>",
     "imagery_quality": "<fresh/mixed/generic>",
     "prosody_issues": "<specific line that fights its meter, or 'none'>",
     "most_memorable_line": "<the single line you'd remember after one listen>"
   },
-  "verdict": "<honest 2–3 sentence summary — lead with the single biggest thing holding this back, end with what it would take to reach the next tier>",
-  "weak_lines": ["<weakest verbatim>","<2nd>","<3rd>","<4th>","<5th>","<6th>","<7th>"],
-  "actions": ["<specific actionable fix 1>","<fix 2>","<fix 3>","<fix 4>","<fix 5>"]
+  "verdict": "<honest 2–3 sentence summary>",
+  "weak_lines": ["<weakest>","<2nd>","<3rd>","<4th>","<5th>","<6th>","<7th>"],
+  "actions": ["<fix 1>","<fix 2>","<fix 3>","<fix 4>","<fix 5>"]
 }`;
 }
 
@@ -1301,16 +1882,14 @@ function buildSurgicalPrompt(ctx, lyrics, weakLines) {
 Before writing any rewrite, read the full song and build an imagery catalogue — every concrete noun and physical action verb, with its section. This is your only allowed word pool for content words.
 
 For each weak line, produce a rewrite that:
-1. Stays within ±1 syllable of the original (count carefully)
-2. Uses only words from the imagery catalogue — no imported metaphors
+1. Stays within ±1 syllable of the original
+2. Uses only words from the imagery catalogue
 3. Shares no word, root word, or image with the line immediately before or after it in the song
 4. Does not appear verbatim anywhere else in the song
-5. Moves to a different image domain than the original (machinery→fire, weather→signal etc) — not a synonym swap
-6. Performs the same structural role as the original (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF)
+5. Moves to a different image domain than the original
+6. Performs the same structural role (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF)
 7. Contains no abstract emotional statements — only the physical event that produces the feeling
-8. Is the only line that could exist here, not just a different line
-
-The "why" must name the exact word substituted, what it replaced, and what the listener now specifically pictures that they didn't before. Generic quality claims ("more vivid", "hits harder") are not acceptable.
+8. Is the only line that could exist here
 
 Context: "${ctx || 'None provided'}"
 
@@ -1336,29 +1915,26 @@ Respond ONLY with valid JSON, no markdown:
       "domain_shift": "<original domain> → <new domain>",
       "catalogue_check": "<each content word: in catalogue yes/no>",
       "after": "<rewrite>",
-      "why": "<'[word] replaces [original] because [specific perceptual change] — maintaining [ROLE] by [how]'>"
+      "why": "<'[word] replaces [original] because [specific perceptual change]'>"
     }
   ]
 }`;
 }
 
-
 function buildSingleRegenPrompt(ctx, lyrics, line) {
   return `You are a master songwriter. Rewrite one weak line to elite level.
 
-Read the full song first. Build an imagery catalogue (every concrete noun and physical action verb, with section). That is your only allowed word pool.
+Read the full song. Build an imagery catalogue. That is your only allowed word pool.
 
 The rewrite must:
 1. Stay within ±1 syllable of the original
-2. Use only catalogue words — no imports
+2. Use only catalogue words
 3. Share no word, root, or image with the immediately adjacent lines
 4. Not appear verbatim elsewhere in the song
 5. Move to a different image domain than the original
-6. Perform the same structural role (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF)
+6. Perform the same structural role
 7. Replace abstraction with physical event
 8. Be the only line that could exist here
-
-The "why" must name the exact substitution and what the listener now pictures. No generic quality claims.
 
 Context: "${ctx || 'None provided'}"
 
@@ -1383,49 +1959,44 @@ Respond ONLY with valid JSON, no markdown:
       "domain_shift": "<original domain> → <new domain>",
       "catalogue_check": "<content word: yes/no each>",
       "after": "<rewrite>",
-      "why": "<'[word] replaces [original] because [specific perceptual change] — maintaining [ROLE] by [how]'>"
+      "why": "<'[word] replaces [original] because [specific perceptual change]'>"
     }
   ]
 }`;
 }
-
 
 function buildFullRewritePrompt(ctx, lyrics, grade, targetSections) {
   const flagsText = grade.primary_flags
     ? `Primary weaknesses:\n- Show vs Tell: ${sanitizeForPrompt(grade.primary_flags.show_vs_tell)}\n- Interchangeable: ${sanitizeForPrompt(grade.primary_flags.interchangeable)}\n- Filler: ${sanitizeForPrompt(grade.primary_flags.filler)}`
     : '';
   const checklistText = grade.checklist
-    ? `Song's central idea: ${sanitizeForPrompt(grade.checklist.central_idea)}\nCohesion: ${sanitizeForPrompt(grade.checklist.cohesion)}\nImagery quality: ${sanitizeForPrompt(grade.checklist.imagery_quality)}\nProsody issue: ${sanitizeForPrompt(grade.checklist.prosody_issues)}`
-    : '';
-  const actionsText = grade.actions
-    ? `Specific fixes needed:\n${grade.actions.map((a,i) => `${i+1}. ${sanitizeForPrompt(a)}`).join('\n')}`
+    ? `Central idea: ${sanitizeForPrompt(grade.checklist.central_idea)}\nCohesion: ${sanitizeForPrompt(grade.checklist.cohesion)}\nImagery: ${sanitizeForPrompt(grade.checklist.imagery_quality)}\nProsody issue: ${sanitizeForPrompt(grade.checklist.prosody_issues)}`
     : '';
   const scopeNote = targetSections && targetSections.length
     ? `SCOPE: Only rewrite these sections: ${targetSections.map(s => `[${s}]`).join(', ')}. Leave all other sections EXACTLY as they are.`
     : 'SCOPE: Rewrite the full song.';
 
-  return `You are a professional master songwriter and lyric editor. Rewrite this song to 10/10 quality.
+  return `You are a professional master songwriter and lyric editor. Rewrite this song to 10/10.
 
 ${scopeNote}
 
 NON-NEGOTIABLE RULES:
-1. NEVER EXPLAIN THE IMAGE — no apposition tags, no "a metaphor for X". If the image needs explaining it is the wrong image.
-2. NEVER make a line longer than the original — count syllables before and after every change. Adding words is always wrong.
-3. KEEP what is already strong — only touch weak lines. Strong lines stay verbatim.
-4. NO ABSTRACT EMOTIONAL STATEMENTS — replace every abstract statement with the physical image that does the emotional work.
-5. STAY INSIDE THE SONG'S WORLD — use only imagery already present. Extend the existing world. Do not import new metaphors.
-6. PRESERVE STRUCTURE EXACTLY — keep all section labels in order.
-7. EVOLVE REPEATED SECTIONS — second instance must deepen the emotional state. Change 1–2 lines only. No copy-paste.
-8. SERVE THE CENTRAL IDEA — every line must support the song's controlling idea. Cut or replace anything that drifts.
-9. NO ADJACENCY DUPLICATION — when rewriting a line, check the two lines immediately surrounding it. Do not introduce a word or image that already appears in those neighbours. Duplication in adjacent lines kills momentum.
-10. THE IRREPLACEABILITY TEST — before finalising any rewrite, ask: is this the only line that could exist here, or just a different line? If just different, rewrite again.
+1. NEVER explain the image.
+2. NEVER make a line longer than the original.
+3. KEEP what is already strong.
+4. NO ABSTRACT EMOTIONAL STATEMENTS.
+5. STAY INSIDE THE SONG'S WORLD.
+6. PRESERVE STRUCTURE EXACTLY.
+7. EVOLVE REPEATED SECTIONS — change 1–2 lines only.
+8. SERVE THE CENTRAL IDEA.
+9. NO ADJACENCY DUPLICATION.
+10. THE IRREPLACEABILITY TEST.
 
 Context: "${ctx || 'None provided'}"
 
-Grade summary — Overall: ${sanitizeForPrompt(String(grade.overall))}/10
+Grade: ${sanitizeForPrompt(String(grade.overall))}/10
 ${checklistText}
 ${flagsText}
-${actionsText}
 
 FULL SONG:
 ---
@@ -1447,16 +2018,14 @@ async function startGrade(mode) {
   if (!lyricsRaw)            return showError('Please paste your lyrics first.');
   if (lyricsRaw.length < 20) return showError('Lyrics look too short — paste the full text.');
   const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
-  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('Add at least one API key in the panel above.');
+  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('Add at least one API key above.');
 
   const retries   = parseInt($('retryCount').value, 10) || 0;
   const lineCount = $('lineCount').value;
   const scope     = $('rewriteScope').value;
-  const targetSections = scope === 'sections' && appState.selectedSections.length
-    ? [...appState.selectedSections]
-    : null;
+  const targetSections = scope === 'sections' && appState.selectedSections.length ? [...appState.selectedSections] : null;
 
-  clearError(); clearPartialNotice();
+  clearError();
   controller = new AbortController();
   const { signal } = controller;
   setBusy(true);
@@ -1465,7 +2034,6 @@ async function startGrade(mode) {
   const lyrics = clean(lyricsRaw);
   const ctx    = clean(ctxRaw);
 
-  // Pass 1: Grade
   setStatus('Grading your lyrics…', 'Pass 1 of 2');
   let gradeResult, usedModel;
   try {
@@ -1478,16 +2046,13 @@ async function startGrade(mode) {
     showError(e.message, e.cause || ''); return;
   }
 
-  // Pass 2: Rewrite
-  let rewrites = [], fullSong = '';
-  let pass2Failed = false, pass2Error = '';
-  let rewriteModel = null;
+  let rewrites = [], fullSong = '', pass2Failed = false, pass2Error = '', rewriteModel = null;
 
   if (mode === 'surgical') {
     const maxLines  = lineCount === 'all' ? gradeResult.weak_lines.length : parseInt(lineCount, 10);
     const weakLines = gradeResult.weak_lines.filter(Boolean).slice(0, maxLines);
     const lineLabel = weakLines.length === 1 ? '1 line' : `${weakLines.length} lines`;
-    setStatus(`Rewriting the ${lineLabel}${keys.anthropic ? ' via Claude — may take 20–40s…' : '…'}`, 'Pass 2 of 2');
+    setStatus(`Rewriting the ${lineLabel}${keys.anthropic ? ' via Claude…' : '…'}`, 'Pass 2 of 2');
     try {
       const r = await callRewriteAPI(keys, buildSurgicalPrompt(ctx, lyrics, weakLines), signal, retries, 0.75);
       rewrites = parseRewrites(r.text);
@@ -1495,11 +2060,10 @@ async function startGrade(mode) {
     } catch(e) {
       if (e.name === 'AbortError') { controller = null; setBusy(false); return; }
       pass2Failed = true; pass2Error = e.message;
-      rewrites = [];
     }
   } else {
     const scopeDesc = targetSections ? `sections: ${targetSections.join(', ')}` : 'full song';
-    setStatus(`Rewriting ${scopeDesc} to 10/10${keys.anthropic ? ' via Claude — may take 20–40s…' : '…'}`, 'Pass 2 of 2');
+    setStatus(`Rewriting ${scopeDesc}${keys.anthropic ? ' via Claude…' : '…'}`, 'Pass 2 of 2');
     try {
       const r = await callRewriteAPI(keys, buildFullRewritePrompt(ctx, lyrics, gradeResult, targetSections), signal, retries, 0.78);
       fullSong = parseFullRewrite(r.text);
@@ -1507,208 +2071,131 @@ async function startGrade(mode) {
     } catch(e) {
       if (e.name === 'AbortError') { controller = null; setBusy(false); return; }
       pass2Failed = true; pass2Error = e.message;
-      fullSong = '';
     }
   }
 
   controller = null;
   setBusy(false);
 
-  // Fix #11: cap history at MAX_HISTORY entries
   const prevHistory = [...appState.gradeHistory];
   prevHistory.push({ score: gradeResult.overall, dimensions: gradeResult.dimensions, model: usedModel, ctx, timestamp: Date.now() });
   if (prevHistory.length > MAX_HISTORY) prevHistory.shift();
 
-  appState = {
-    ...appState,
-    gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, ctx, lyrics,
-    acceptedRewrites: {},
-    gradeHistory: prevHistory,
-    pass2Failed, pass2Error,
-    targetSections
-  };
-
+  appState = { ...appState, gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, ctx, lyrics, acceptedRewrites: {}, gradeHistory: prevHistory, pass2Failed, pass2Error, targetSections };
   try { sessionStorage.setItem('lg_history', JSON.stringify(prevHistory)); } catch(_) {}
 
   if (pass2Failed) {
-    showPartialNotice(`Grade complete — rewrite step failed: ${pass2Error}. Your grade is shown below. Try again to get rewrites.`);
+    const pn = $('partialNotice');
+    pn.textContent = `Grade complete — rewrite step failed: ${pass2Error}. Try again to get rewrites.`;
+    pn.classList.add('active');
   }
 
   renderResults(gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, prevHistory, targetSections);
   showPhase('phaseResults');
 
-  // Auto-repair any rewrites that failed client-side validation (syllable mismatch
-  // or empty after). Fires once per line — user can still manually regenerate after.
-  if (mode === 'surgical' && rewrites.length) {
-    autoRepairRewrites();
-  }
+  if (mode === 'surgical' && rewrites.length) autoRepairRewrites();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Regen single line
+// Regen + auto-repair
 // ─────────────────────────────────────────────────────────────────────────────
 async function regenLine(idx) {
   const { gradeResult, lyrics, ctx } = appState;
   const line = appState.rewrites[idx]?.before || gradeResult.weak_lines[idx];
   if (!line) return;
-
   const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
-  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('API key required to regenerate.');
-
+  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('API key required.');
   const retries = parseInt($('retryCount').value, 10) || 0;
   clearError();
   controller = new AbortController();
   const { signal } = controller;
-
-  // Fix #5: only disable buttons within this specific pair, not all pairs
   const thisPair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
-  const pairBtns = thisPair ? thisPair.querySelectorAll('button') : [];
-  pairBtns.forEach(b => b.disabled = true);
-
+  if (thisPair) thisPair.querySelectorAll('button').forEach(b => b.disabled = true);
   setStatus(`Regenerating line ${idx + 1}…`);
-
   try {
     const r = await callRewriteAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.82);
     let result;
-    try {
-      result = parseRewrites(r.text);
-    } catch(_) {
-      // Parse failed — retry once at lower temperature
+    try { result = parseRewrites(r.text); }
+    catch(_) {
       const r2 = await callRewriteAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.6);
-      try {
-        result = parseRewrites(r2.text);
-      } catch(parseErr) {
-        // Fix #7: user-friendly message instead of raw parse error
-        throw new Error('Regeneration returned an unexpected format — try once more.');
-      }
+      try { result = parseRewrites(r2.text); }
+      catch(e2) { throw new Error('Regeneration returned unexpected format — try once more.'); }
     }
-    if (result[0]) {
-      appState.rewrites[idx] = result[0];
-      delete appState.acceptedRewrites[idx];
-      renderRewritePair(idx, result[0]);
-      updateAcceptedBuffer();
-    }
-  } catch(e) {
-    if (e.name !== 'AbortError') showError(e.message);
-  } finally {
-    controller = null;
-    setStatus('');
-    // Re-enable this pair's buttons (renderRewritePair may have replaced them,
-    // so re-query after potential DOM update)
-    const updatedPair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
-    if (updatedPair) updatedPair.querySelectorAll('button').forEach(b => b.disabled = false);
+    if (result[0]) { appState.rewrites[idx] = result[0]; delete appState.acceptedRewrites[idx]; renderRewritePair(idx, result[0]); updateAcceptedBuffer(); }
+  } catch(e) { if (e.name !== 'AbortError') showError(e.message); }
+  finally {
+    controller = null; setStatus('');
+    const up = document.querySelector(`[data-rewrite-idx="${idx}"]`);
+    if (up) up.querySelectorAll('button').forEach(b => b.disabled = false);
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Auto-repair: sequentially regen rewrites that failed client validation
-// ─────────────────────────────────────────────────────────────────────────────
 async function autoRepairRewrites() {
-  // Find indices that need repair: empty after OR syllable fail
-  // Run at most one repair attempt per line (don't loop infinitely)
-  const toRepair = appState.rewrites
-    .map((r, idx) => ({ idx, r }))
-    .filter(({ r }) => !r.after || !r.after.trim() || r.syllable_pass === false);
-
+  const toRepair = appState.rewrites.map((r, idx) => ({ idx, r })).filter(({ r }) => !r.after || !r.after.trim() || r.syllable_pass === false);
   if (!toRepair.length) return;
-
   const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
-  if (!keys.groq && !keys.gemini) return;
-
+  if (!keys.groq && !keys.gemini && !keys.anthropic) return;
   const retries = parseInt($('retryCount').value, 10) || 0;
-  const total   = toRepair.length;
-  let repaired  = 0, stillBroken = 0;
-
+  let repaired = 0, stillBroken = 0;
   for (let i = 0; i < toRepair.length; i++) {
     const { idx, r } = toRepair[i];
-    const line = r.before;
-    if (!line) continue;
-
-    setStatus(`Auto-repairing ${i + 1}/${total} broken rewrites…`, 'repair');
+    if (!r.before) continue;
+    setStatus(`Auto-repairing ${i + 1}/${toRepair.length} broken rewrites…`, 'repair');
     controller = new AbortController();
     const { signal } = controller;
-
     try {
-      const resp = await callRewriteAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, line), signal, retries, 0.82);
+      const resp = await callRewriteAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, r.before), signal, retries, 0.82);
       const result = parseRewrites(resp.text);
       if (result[0] && result[0].after && result[0].after.trim()) {
-        // Mark as auto-repaired so the pair can show an indicator
         result[0].auto_repaired = true;
         appState.rewrites[idx] = result[0];
         delete appState.acceptedRewrites[idx];
         renderRewritePair(idx, result[0]);
         updateAcceptedBuffer();
-        if (result[0].syllable_pass) repaired++;
-        else stillBroken++;
-      } else {
-        stillBroken++;
-      }
-    } catch(e) {
-      if (e.name === 'AbortError') { controller = null; setStatus(''); return; }
-      stillBroken++;
-    } finally {
-      controller = null;
-    }
+        if (result[0].syllable_pass) repaired++; else stillBroken++;
+      } else stillBroken++;
+    } catch(e) { if (e.name === 'AbortError') { controller = null; setStatus(''); return; } stillBroken++; }
+    finally { controller = null; }
   }
-
   setStatus('');
-  // Show repair summary in dedicated element (survives renderResults clearing partialNotice)
   const repairEl = $('repairNotice');
   if (repairEl) {
     if (stillBroken > 0) {
-      const fixedMsg  = repaired > 0 ? `${repaired} fixed` : 'none fixed';
-      const brokenMsg = `${stillBroken} still broken`;
-      repairEl.textContent = `Auto-repair: ${fixedMsg}, ${brokenMsg} — model may be stuck on these lines. Try Regenerate, or rewrite manually.`;
+      repairEl.textContent = `Auto-repair: ${repaired > 0 ? `${repaired} fixed` : 'none fixed'}, ${stillBroken} still broken — try Regenerate.`;
       repairEl.classList.add('active');
     } else if (repaired > 0) {
-      repairEl.textContent = `Auto-repair: ${repaired} rewrite${repaired !== 1 ? 's' : ''} fixed automatically.`;
+      repairEl.textContent = `Auto-repair: ${repaired} rewrite${repaired !== 1 ? 's' : ''} fixed.`;
       repairEl.classList.add('active');
       setTimeout(() => repairEl.classList.remove('active'), 6000);
     }
   }
 }
-function acceptRewrite(idx) {
-  const r = appState.rewrites[idx];
-  if (!r) return;
-  appState.acceptedRewrites[idx] = r.after;
-  updateRewritePairUI(idx, true);
-  updateAcceptedBuffer();
-}
 
+function acceptRewrite(idx) {
+  const r = appState.rewrites[idx]; if (!r) return;
+  appState.acceptedRewrites[idx] = r.after;
+  updateRewritePairUI(idx, true); updateAcceptedBuffer();
+}
 function skipRewrite(idx) {
   delete appState.acceptedRewrites[idx];
-  updateRewritePairUI(idx, false);
-  updateAcceptedBuffer();
+  updateRewritePairUI(idx, false); updateAcceptedBuffer();
 }
-
 function updateRewritePairUI(idx, accepted) {
-  const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
-  if (!pair) return;
+  const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`); if (!pair) return;
   const afterBlock = pair.querySelector('.line-after, .line-accepted');
   if (afterBlock) afterBlock.className = `line-block ${accepted ? 'line-accepted' : 'line-after'}`;
   const acceptBtn = pair.querySelector('.btn-accept');
   const skipBtn   = pair.querySelector('.btn-skip');
-  const badge     = pair.querySelector('.accepted-badge');
+  const badge     = pair.querySelector('.applied-badge');
   if (acceptBtn) { acceptBtn.textContent = accepted ? 'Accepted ✓' : 'Accept'; acceptBtn.classList.toggle('accepted', accepted); }
   if (skipBtn)   { skipBtn.disabled = !accepted; }
   if (badge)     { badge.style.display = accepted ? '' : 'none'; }
 }
-
 function updateAcceptedBuffer() {
   const { acceptedRewrites, rewrites, lyrics } = appState;
-  if (!Object.keys(acceptedRewrites).length) {
-    $('acceptedBuffer').classList.remove('visible');
-    return;
-  }
-
-  // Fix #6: use split/join instead of String.replace() to patch all occurrences
+  if (!Object.keys(acceptedRewrites).length) { $('acceptedBuffer').classList.remove('visible'); return; }
   let result = lyrics;
-  rewrites.forEach((r, idx) => {
-    if (acceptedRewrites[idx] && r.before) {
-      result = result.split(r.before).join(acceptedRewrites[idx]);
-    }
-  });
-
+  rewrites.forEach((r, idx) => { if (acceptedRewrites[idx] && r.before) result = result.split(r.before).join(acceptedRewrites[idx]); });
   $('acceptedBufferBody').textContent = result;
   $('acceptedBuffer').classList.add('visible');
 }
@@ -1716,17 +2203,12 @@ function updateAcceptedBuffer() {
 // ─────────────────────────────────────────────────────────────────────────────
 // History
 // ─────────────────────────────────────────────────────────────────────────────
-function toggleHistory() {
-  $('historyPanel').classList.toggle('open');
-}
-
+function toggleHistory() { $('historyPanel').classList.toggle('open'); }
 function renderHistory(history) {
-  const row   = $('historyRow');
-  const panel = $('historyPanel');
-  if (history.length <= 1) { row.style.display = 'none'; return; }
-  row.style.display = 'flex';
+  const row = $('historyRow'), panel = $('historyPanel');
+  if (history.length <= 1) { row.classList.remove('visible'); return; }
+  row.classList.add('visible');
   $('historyLabel').textContent = `${history.length} grades this session`;
-
   panel.innerHTML = '';
   [...history].reverse().forEach((h, i) => {
     const realIdx = history.length - 1 - i;
@@ -1736,63 +2218,43 @@ function renderHistory(history) {
     entry.className = 'history-entry';
     const time = new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const deltaHtml = delta !== null
-      ? `<span class="history-delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'}">${delta > 0 ? '+' : ''}${delta}</span>`
-      : '<span class="history-delta same">baseline</span>';
+      ? `<span class="hist-delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'}">${delta > 0 ? '+' : ''}${delta}</span>`
+      : '<span class="hist-delta same">baseline</span>';
     entry.innerHTML = `
-      <span class="history-num">${realIdx + 1}</span>
-      <span class="history-score">${h.score}</span>
-      <div class="history-meta">
-        <div class="history-meta-top">via ${esc(h.model)}${h.ctx ? ` · ${esc(h.ctx.slice(0,40))}` : ''}</div>
-        <div class="history-meta-time">${time}</div>
+      <span class="hist-num">${realIdx + 1}</span>
+      <span class="hist-score">${h.score}</span>
+      <div class="hist-meta">
+        <div class="hist-meta-top">via ${esc(h.model)}${h.ctx ? ` · ${esc(h.ctx.slice(0,40))}` : ''}</div>
+        <div class="hist-meta-time">${time}</div>
       </div>
       ${deltaHtml}`;
     panel.appendChild(entry);
   });
 }
-
 function renderDeltaBanner(history) {
   const banner = $('deltaBanner');
   if (history.length < 2) { banner.classList.remove('active'); return; }
-  const curr = history[history.length - 1];
-  const prev = history[history.length - 2];
+  const curr = history[history.length - 1], prev = history[history.length - 2];
   if (!curr || !prev) { banner.classList.remove('active'); return; }
-
   banner.innerHTML = '';
   const label = document.createElement('span');
-  label.className = 'delta-label';
-  label.textContent = 'vs last grade';
+  label.className = 'delta-label'; label.textContent = 'vs last grade';
   banner.appendChild(label);
-
-  const scores = document.createElement('div');
-  scores.className = 'delta-scores';
-
-  const overallDelta = +(curr.score - prev.score).toFixed(1);
-  const overallItem  = document.createElement('div');
-  overallItem.className = 'delta-item';
-  overallItem.innerHTML = `
-    <span class="delta-item-label">Overall</span>
-    <span class="delta-item-val ${overallDelta > 0 ? 'up' : overallDelta < 0 ? 'down' : 'same'}">${prev.score}</span>
-    <span class="delta-arrow">→</span>
-    <span class="delta-new-val">${curr.score}</span>
-    <span class="delta-item-val ${overallDelta > 0 ? 'up' : overallDelta < 0 ? 'down' : 'same'}">${overallDelta > 0 ? '+' : ''}${overallDelta}</span>`;
-  scores.appendChild(overallItem);
-
+  const chips = document.createElement('div'); chips.className = 'delta-chips';
+  const od = +(curr.score - prev.score).toFixed(1);
+  const oc = document.createElement('div'); oc.className = 'delta-chip';
+  oc.innerHTML = `<span class="lbl">Overall</span> <span class="val ${od > 0 ? 'up' : od < 0 ? 'down' : 'same'}">${prev.score} → ${curr.score} (${od > 0 ? '+' : ''}${od})</span>`;
+  chips.appendChild(oc);
   if (prev.dimensions && curr.dimensions) {
     curr.dimensions.forEach((dim, i) => {
-      const prevDim = prev.dimensions[i];
-      if (!prevDim) return;
-      const d = +(dim.score - prevDim.score).toFixed(1);
-      if (d === 0) return;
-      const item = document.createElement('div');
-      item.className = 'delta-item';
-      item.innerHTML = `
-        <span class="delta-item-label">${esc(dim.label.split(' ')[0])}</span>
-        <span class="delta-item-val ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
-      scores.appendChild(item);
+      const pd = prev.dimensions[i]; if (!pd) return;
+      const d = +(dim.score - pd.score).toFixed(1); if (d === 0) return;
+      const chip = document.createElement('div'); chip.className = 'delta-chip';
+      chip.innerHTML = `<span class="lbl">${esc(dim.label.split(' ')[0])}</span><span class="val ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
+      chips.appendChild(chip);
     });
   }
-
-  banner.appendChild(scores);
+  banner.appendChild(chips);
   banner.classList.add('active');
 }
 
@@ -1802,106 +2264,96 @@ function renderDeltaBanner(history) {
 function renderResults(grade, modelName, rewriteModelName, rewrites, fullSong, mode, history, targetSections) {
   renderDeltaBanner(history);
   renderHistory(history);
-  clearPartialNotice();
+  $('partialNotice').classList.remove('active');
 
-  $('overallNum').textContent = grade.overall;
-  // Show grade model; if rewrite used a different model, show that too
-  const rewriteTag = rewriteModelName && rewriteModelName !== modelName
-    ? ` · rewrites via ${rewriteModelName}`
-    : '';
+  $('resultsContext').textContent = appState.ctx || 'No context provided';
+  const num = $('overallNum');
+  num.textContent = grade.overall;
+  num.className = 'grade-num' + (grade.overall >= 8.5 ? ' high' : grade.overall >= 6.5 ? ' mid' : ' low');
+
+  const rewriteTag = rewriteModelName && rewriteModelName !== modelName ? ` · rewrites via ${rewriteModelName}` : '';
   $('modelTag').textContent = `graded via ${modelName}${rewriteTag}`;
 
-  const overallDeltaEl = $('overallDelta');
+  const ode = $('overallDelta');
   if (history.length >= 2) {
     const prev = history[history.length - 2];
     const d = +(grade.overall - prev.score).toFixed(1);
-    overallDeltaEl.textContent = d > 0 ? `▲ +${d} from last` : d < 0 ? `▼ ${d} from last` : '— no change';
-    overallDeltaEl.className = `overall-delta ${d > 0 ? 'up' : d < 0 ? 'down' : 'same'}`;
-  } else {
-    overallDeltaEl.textContent = '';
-  }
+    ode.textContent = d > 0 ? `▲ +${d} from last` : d < 0 ? `▼ ${d} from last` : '— no change';
+    ode.className = `grade-delta ${d > 0 ? 'up' : d < 0 ? 'down' : 'same'}`;
+  } else { ode.textContent = ''; }
 
-  const grid = $('scoreGrid');
-  grid.innerHTML = '';
+  // Score grid
+  const grid = $('scoreGrid'); grid.innerHTML = '';
   const prevGrade = history.length >= 2 ? history[history.length - 2] : null;
   grade.dimensions.forEach((dim, i) => {
     const pct = Math.min(100, Math.max(0, (dim.score / 10) * 100)).toFixed(1);
-    let deltaBadge = '';
+    const cell = document.createElement('div');
+    cell.className = 'score-cell';
+    cell.style.animationDelay = `${i * 60}ms`;
+    let deltaHtml = '';
     if (prevGrade && prevGrade.dimensions && prevGrade.dimensions[i]) {
       const d = +(dim.score - prevGrade.dimensions[i].score).toFixed(1);
-      if (d !== 0) deltaBadge = `<span class="score-delta-badge ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
+      if (d !== 0) deltaHtml = `<div class="score-delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</div>`;
     }
-    const card = document.createElement('div');
-    card.className = 'score-card';
-    card.style.animationDelay = `${i * 55}ms`;
-    card.innerHTML = `
-      <div class="score-top">
-        <span class="score-lbl">${esc(dim.label)}</span>
-        <div class="score-val-group"><span class="score-val">${esc(String(dim.score))}</span>${deltaBadge}</div>
-      </div>
-      <div class="score-track"><div class="score-fill" data-pct="${pct}"></div></div>
-      <p class="score-note">${esc(dim.note)}</p>`;
-    grid.appendChild(card);
+    cell.innerHTML = `
+      <div class="score-fill-bg" data-pct="${pct}"></div>
+      <div class="score-cell-label">${esc(dim.label)}</div>
+      <div class="score-cell-num">${esc(String(dim.score))}</div>
+      ${deltaHtml}
+      <div class="score-cell-note">${esc(dim.note)}</div>`;
+    grid.appendChild(cell);
   });
   setTimeout(() => {
-    document.querySelectorAll('.score-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
+    document.querySelectorAll('.score-fill-bg').forEach(el => { el.style.height = el.dataset.pct + '%'; });
   }, 20);
 
   $('verdictText').textContent = grade.verdict;
 
-  const flagsEl = $('primaryFlags');
-  flagsEl.innerHTML = '';
+  // Flags
+  const flagsEl = $('primaryFlags'); flagsEl.innerHTML = '';
   if (grade.primary_flags) {
     const f = grade.primary_flags;
-    [
-      { label: 'Show vs Tell',    value: f.show_vs_tell },
-      { label: 'Interchangeable', value: f.interchangeable },
-      { label: 'Filler',          value: f.filler }
-    ].forEach(flag => {
-      if (!flag.value || flag.value === 'none') return;
-      const row = document.createElement('div');
-      row.className = 'flag-row';
-      row.innerHTML = `<span class="flag-label">${esc(flag.label)}</span><span class="flag-value">"${esc(flag.value)}"</span>`;
-      flagsEl.appendChild(row);
+    [{ label: 'Show vs Tell', value: f.show_vs_tell }, { label: 'Interchangeable', value: f.interchangeable }, { label: 'Filler', value: f.filler }].forEach(flag => {
+      if (!flag.value || flag.value === 'none') { const empty = document.createElement('div'); empty.className = 'flag-cell'; flagsEl.appendChild(empty); return; }
+      const cell = document.createElement('div'); cell.className = 'flag-cell';
+      cell.innerHTML = `<div class="flag-type">${esc(flag.label)}</div><div class="flag-quote">"${esc(flag.value)}"</div>`;
+      flagsEl.appendChild(cell);
     });
   }
 
   // Checklist
-  const cl     = grade.checklist || {};
-  const clGrid = $('checklistGrid');
-  clGrid.innerHTML = '';
-  const cohesionClass = { yes: 'yes', partial: 'partial', no: 'no' }[cl.cohesion?.toLowerCase()] || 'partial';
-  const imgClass      = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
-  const clItems = [
-    { label: 'Central idea',        val: cl.central_idea || '—',   highlight: false },
-    { label: 'Section cohesion',    val: cl.cohesion || '—',       badge: cohesionClass },
-    { label: 'Imagery quality',     val: cl.imagery_quality || '—', badge: imgClass },
-    { label: 'Prosody issue',       val: cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${cl.prosody_issues}"` : 'None identified', highlight: false },
-    { label: 'Most memorable line', val: cl.most_memorable_line || '—', highlight: true },
-  ];
-  clItems.forEach(item => {
-    const el = document.createElement('div');
-    el.className = 'checklist-item';
-    const badge  = item.badge ? `<div><span class="checklist-badge ${item.badge}">${esc(item.val)}</span></div>` : '';
-    const valHtml = badge || `<div class="checklist-item-val${item.highlight ? ' highlight' : ''}">${esc(item.val)}</div>`;
-    el.innerHTML = `<div class="checklist-item-label">${esc(item.label)}</div>${valHtml}`;
-    clGrid.appendChild(el);
+  const cl = grade.checklist || {}, clBlock = $('checklistBlock'); clBlock.innerHTML = '';
+  const cohClass = { yes: 'yes', partial: 'partial', no: 'no' }[cl.cohesion?.toLowerCase()] || 'partial';
+  const imgClass = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
+  [
+    { label: 'Central Idea', val: cl.central_idea || '—', kind: 'text' },
+    { label: 'Cohesion',     val: cl.cohesion || '—',     kind: 'badge', cls: cohClass },
+    { label: 'Imagery',      val: cl.imagery_quality || '—', kind: 'badge', cls: imgClass },
+    { label: 'Prosody Issue',val: cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${cl.prosody_issues}"` : 'None', kind: 'text' },
+    { label: 'Most Memorable', val: cl.most_memorable_line || '—', kind: 'memorable' },
+  ].forEach(item => {
+    const cell = document.createElement('div'); cell.className = 'checklist-cell';
+    let inner = `<div class="cl-label">${esc(item.label)}</div>`;
+    if (item.kind === 'badge')     inner += `<div><span class="cl-badge ${item.cls}">${esc(item.val)}</span></div>`;
+    else if (item.kind === 'memorable') inner += `<div class="cl-memorable">${esc(item.val)}</div>`;
+    else                           inner += `<div class="cl-val">${esc(item.val)}</div>`;
+    cell.innerHTML = inner;
+    clBlock.appendChild(cell);
   });
 
+  // Mode sections
   $('surgicalSection').style.display = mode === 'surgical' ? '' : 'none';
-  $('fullSection').style.display     = mode === 'full'     ? '' : 'none';
+  $('fullSection').style.display     = mode === 'full' ? '' : 'none';
 
   if (mode === 'surgical') {
     $('surgicalCountTag').textContent   = rewrites.length ? `${rewrites.length} fixed` : '—';
     $('surgicalMasterDesc').textContent = rewrites.length
-      ? `${rewrites.length} weakest line${rewrites.length > 1 ? 's' : ''} rewritten using the song's own imagery. Accept, skip, or regenerate each one.`
+      ? `${rewrites.length} weakest line${rewrites.length > 1 ? 's' : ''} rewritten. Accept, skip, or regenerate each.`
       : 'No rewrites generated — try again.';
-
-    const rList = $('rewriteResultsList');
-    rList.innerHTML = '';
+    const rList = $('rewriteResultsList'); rList.innerHTML = '';
     appState.acceptedRewrites = {};
     if (!rewrites.length) {
-      rList.innerHTML = '<p style="color:var(--text-3);font-size:.87rem;padding:8px 0">No rewrites generated. Rewrite step may have failed — check above for details.</p>';
+      rList.innerHTML = '<p style="color:var(--text-3);font-size:.87rem;padding:16px 0">No rewrites generated. Check above for details.</p>';
     } else {
       rewrites.forEach((r, idx) => {
         const pair = document.createElement('div');
@@ -1916,210 +2368,115 @@ function renderResults(grade, modelName, rewriteModelName, rewrites, fullSong, m
 
   if (mode === 'full') {
     const scopeLabel = targetSections && targetSections.length ? targetSections.join(', ') : 'Full Song';
-    $('fullScopeTag').textContent  = scopeLabel;
+    $('fullScopeTag').textContent   = scopeLabel;
     $('fullMasterDesc').textContent = targetSections && targetSections.length
-      ? `Sections rewritten: ${targetSections.join(', ')}. All other sections preserved exactly.`
+      ? `Rewritten: ${targetSections.join(', ')}. All other sections preserved.`
       : 'Every weak line elevated. Strong lines preserved. Same world, sharper language.';
     $('fullRewriteBody').textContent = fullSong || 'Rewrite failed — try again.';
   }
 
-  const aList = $('actionList');
-  aList.innerHTML = '';
-  grade.actions.forEach(a => {
-    const li = document.createElement('li');
-    li.textContent = a;
-    aList.appendChild(li);
-  });
+  const aList = $('actionList'); aList.innerHTML = '';
+  grade.actions.forEach(a => { const li = document.createElement('li'); li.textContent = a; aList.appendChild(li); });
 }
 
 function renderRewritePair(idx, r) {
-  const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
-  if (!pair) return;
-  pair.innerHTML = '';
-  renderRewritePairInto(pair, idx, r);
+  const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`); if (!pair) return;
+  pair.innerHTML = ''; renderRewritePairInto(pair, idx, r);
 }
 
 function renderRewritePairInto(pair, idx, r) {
   const isAccepted = !!appState.acceptedRewrites[idx];
-  const anchor = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
+  const anchor       = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
+  const repairedTag  = r.auto_repaired ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>` : '';
+  const roleTag      = r.structural_role ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>` : '';
+  const sylWarning   = (!r.syllable_pass && r.syllable_violation) ? `<div class="violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — regenerate</div>` : '';
+  const adjWarning   = (!r.adjacency_clear && r.adjacency_violation) ? `<div class="violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>` : '';
+  const vtWarning    = (!r.verbatim_clear && r.verbatim_violation) ? `<div class="violation-warn">⚠ Duplicate: ${esc(r.verbatim_violation)}</div>` : '';
+  const synWarning   = (!r.synonym_clear && r.synonym_violation) ? `<div class="syn-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate</div>` : '';
 
-  // Auto-repaired indicator (v3.8) — shown when auto-repair ran on this pair
-  const repairedTag = r.auto_repaired
-    ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>`
-    : '';
-
-  // Structural role — shown so user can verify model understood the line's job
-  const roleTag = r.structural_role
-    ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>`
-    : '';
-
-  // Syllable gate violation warning — driven by client counter, not model claim
-  const sylWarning = (!r.syllable_pass && r.syllable_violation)
-    ? `<div class="adj-violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — cadence likely broken, regenerate</div>`
-    : '';
-
-  // Adjacency violation warning — may be model-reported or client-detected (v3.8)
-  const adjWarning = (!r.adjacency_clear && r.adjacency_violation)
-    ? `<div class="adj-violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>`
-    : '';
-
-  // Verbatim duplication warning (v3.8)
-  const vtWarning = (!r.verbatim_clear && r.verbatim_violation)
-    ? `<div class="adj-violation-warn">⚠ Duplicate flag: ${esc(r.verbatim_violation)} — rewrite matches existing lyric</div>`
-    : '';
-
-  // Synonym-swap warning (v3.8) — quality flag, shown in amber not red
-  const synWarning = (!r.synonym_clear && r.synonym_violation)
-    ? `<div class="syn-swap-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate for a genuinely different image</div>`
-    : '';
-
-  // Syllable delta badge — v3.8: always computed from actual text strings,
-  // independent of model's claimed counts. Red = client counter says > ±1.
-  let syllableBadge = '';
+  let sylBadge = '';
   if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
-    const d    = r.syllable_delta;
-    const sign = d > 0 ? '+' : '';
-    const cls  = (!r.syllable_pass) ? 'syl-fail'
-               : Math.abs(d) > 1    ? 'syl-warn'
-               :                      'syl-ok';
-    const tip  = r.syllable_pass ? 'Client syllable count (independent of model claim)' : 'Syllable mismatch — cadence likely broken';
-    syllableBadge = `<span class="syllable-badge ${cls}" title="${tip}">${sign}${d} syl</span>`;
+    const d = r.syllable_delta, sign = d > 0 ? '+' : '';
+    const cls = (!r.syllable_pass) ? 'fail' : Math.abs(d) > 1 ? 'warn' : 'ok';
+    sylBadge = `<span class="syl-badge ${cls}" title="Client syllable count">${sign}${d} syl</span>`;
   }
 
   pair.innerHTML = `
-    ${repairedTag}
-    ${anchor}
-    ${roleTag}
-    ${sylWarning}
-    ${adjWarning}
-    ${vtWarning}
-    ${synWarning}
-    <div class="copyable-block">
-      <div class="line-block line-before"><div class="line-tag">Original</div>${esc(r.before)}</div>
-      <button class="copy-btn js-copy-before">Copy</button>
+    ${repairedTag}${anchor}${roleTag}${sylWarning}${adjWarning}${vtWarning}${synWarning}
+    <div class="line-cols">
+      <div class="line-block line-before">
+        <div class="line-tag">Original</div>
+        <div class="line-text">${esc(r.before)}</div>
+        <button class="copy-line-btn js-copy-before">Copy</button>
+      </div>
+      <div class="line-block ${isAccepted ? 'line-accepted' : 'line-after'}">
+        <div class="line-tag">Master Rewrite</div>
+        <div class="line-text">${esc(r.after)}</div>
+        <button class="copy-line-btn js-copy-after">Copy</button>
+      </div>
     </div>
-    <div class="copyable-block">
-      <div class="line-block ${isAccepted ? 'line-accepted' : 'line-after'}"><div class="line-tag">Master Rewrite</div>${esc(r.after)}</div>
-      <button class="copy-btn js-copy-after">Copy</button>
-    </div>
-    ${r.why ? `<div class="copyable-block"><div class="rewrite-why">${esc(r.why)}</div><button class="copy-btn js-copy-why">Copy</button></div>` : ''}
+    ${r.why ? `<div class="why-block">${esc(r.why)}</div>` : ''}
     <div class="rewrite-actions">
       <button class="btn-accept${isAccepted ? ' accepted' : ''}" data-idx="${idx}">${isAccepted ? 'Accepted ✓' : 'Accept'}</button>
       <button class="btn-skip" data-idx="${idx}"${!isAccepted ? ' disabled' : ''}>Skip</button>
-      <button class="btn-regen" data-idx="${idx}">↻ Regenerate</button>
-      ${syllableBadge}
-      <span class="accepted-badge" style="display:${isAccepted ? '' : 'none'}">Applied to buffer</span>
+      <button class="btn-regen" data-idx="${idx}">↻ Regen</button>
+      ${sylBadge}
+      <span class="applied-badge" style="display:${isAccepted ? '' : 'none'}">Applied</span>
     </div>`;
 
-  // Fix #10: copy buttons use closure over raw strings — no escaped values in attributes
   const beforeBtn = pair.querySelector('.js-copy-before');
   const afterBtn  = pair.querySelector('.js-copy-after');
-  const whyBtn    = pair.querySelector('.js-copy-why');
   if (beforeBtn) beforeBtn.addEventListener('click', () => copyText(beforeBtn, r.before));
   if (afterBtn)  afterBtn.addEventListener('click',  () => copyText(afterBtn,  r.after));
-  if (whyBtn)    whyBtn.addEventListener('click',    () => copyText(whyBtn,    r.why || ''));
 
-  pair.querySelectorAll('.btn-accept').forEach(btn => {
-    btn.addEventListener('click', () => acceptRewrite(parseInt(btn.dataset.idx)));
-  });
-  pair.querySelectorAll('.btn-skip').forEach(btn => {
-    btn.addEventListener('click', () => skipRewrite(parseInt(btn.dataset.idx)));
-  });
-  pair.querySelectorAll('.btn-regen').forEach(btn => {
-    btn.addEventListener('click', () => regenLine(parseInt(btn.dataset.idx)));
-  });
+  pair.querySelectorAll('.btn-accept').forEach(btn => btn.addEventListener('click', () => acceptRewrite(parseInt(btn.dataset.idx))));
+  pair.querySelectorAll('.btn-skip').forEach(btn => btn.addEventListener('click', () => skipRewrite(parseInt(btn.dataset.idx))));
+  pair.querySelectorAll('.btn-regen').forEach(btn => btn.addEventListener('click', () => regenLine(parseInt(btn.dataset.idx))));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Regrade from results
+// Regrade / reset
 // ─────────────────────────────────────────────────────────────────────────────
 function regradeFromResults() {
   $('lyrics').value = appState.lyrics;
   $('context').value = appState.ctx;
-  $('charCount').textContent = `${appState.lyrics.length.toLocaleString()} characters`;
+  $('charCount').textContent = `${appState.lyrics.length.toLocaleString()} ch`;
   parseSectionsFromInput();
   showPhase('phaseInput');
 }
+function resetAll() {
+  const savedCtx = $('context').value, savedHistory = appState.gradeHistory;
+  appState = { gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical', ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: savedHistory, parsedSections: [], selectedSections: [] };
+  $('lyrics').value = ''; $('charCount').textContent = '0 ch'; $('context').value = savedCtx;
+  $('rewriteResultsList').innerHTML = ''; $('fullRewriteBody').textContent = ''; $('actionList').innerHTML = '';
+  $('scoreGrid').innerHTML = ''; $('primaryFlags').innerHTML = ''; $('checklistBlock').innerHTML = '';
+  const chips = $('sectionChips'); chips.innerHTML = '';
+  const allChip = document.createElement('span'); allChip.className = 'section-chip selected'; allChip.dataset.section = 'all'; allChip.textContent = 'All'; allChip.addEventListener('click', toggleSectionAll); chips.appendChild(allChip);
+  $('sectionPicker').classList.remove('visible'); $('rewriteScope').value = 'full';
+  $('deltaBanner').classList.remove('active'); $('historyRow').classList.remove('visible'); $('historyPanel').innerHTML = ''; $('historyPanel').classList.remove('open');
+  $('sectionLabelHint').classList.remove('visible');
+  const rn = $('repairNotice'); if (rn) rn.classList.remove('active');
+  clearError(); setStatus(''); showPhase('phaseInput');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Copy helpers
+// Copy
 // ─────────────────────────────────────────────────────────────────────────────
 function copyText(btn, text) {
-  const done = () => {
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = orig === 'Copied!' ? 'Copy' : orig; btn.classList.remove('copied'); }, 2000);
-  };
+  const orig = btn.textContent;
+  const done = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig === 'Copied!' ? 'Copy' : orig; btn.classList.remove('copied'); }, 2000); };
   navigator.clipboard.writeText(text).then(done).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    done();
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
   });
 }
-
 function copyAllRewrites() {
-  const { rewrites } = appState;
-  if (!rewrites.length) return;
-  const text = rewrites.map(r => `Original: ${r.before}\nRewrite: ${r.after}${r.why ? `\nWhy: ${r.why}` : ''}`).join('\n\n');
-  const btn  = $('copyAllBtn');
-  copyText(btn, text);
+  if (!appState.rewrites.length) return;
+  const text = appState.rewrites.map(r => `Original: ${r.before}\nRewrite: ${r.after}${r.why ? `\nWhy: ${r.why}` : ''}`).join('\n\n');
+  copyText($('copyAllBtn'), text);
 }
-
-function copyFullSong() {
-  const text = appState.fullSong;
-  if (!text) return;
-  copyText($('copyFullBtn'), text);
-}
-
-function copyBuffer() {
-  const text = $('acceptedBufferBody').textContent;
-  if (!text) return;
-  copyText($('copyBufferBtn'), text);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Reset
-// ─────────────────────────────────────────────────────────────────────────────
-function resetAll() {
-  const savedCtx     = $('context').value;
-  const savedHistory = appState.gradeHistory;
-  appState = {
-    gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical',
-    ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: savedHistory,
-    parsedSections: [], selectedSections: []
-  };
-  $('lyrics').value = '';
-  $('charCount').textContent = '0 characters';
-  $('context').value = savedCtx;
-  $('rewriteResultsList').innerHTML = '';
-  $('fullRewriteBody').textContent = '';
-  $('actionList').innerHTML = '';
-  $('scoreGrid').innerHTML = '';
-  $('primaryFlags').innerHTML = '';
-
-  // Rebuild section chips cleanly
-  const chips = $('sectionChips');
-  chips.innerHTML = '';
-  const allChip = document.createElement('span');
-  allChip.className = 'section-chip section-chip-all selected';
-  allChip.dataset.section = 'all';
-  allChip.textContent = 'All Sections';
-  allChip.addEventListener('click', toggleSectionAll);
-  chips.appendChild(allChip);
-
-  $('sectionPicker').classList.remove('visible');
-  $('rewriteScope').value = 'full';
-  $('deltaBanner').classList.remove('active');
-  $('historyRow').style.display = 'none';
-  $('historyPanel').innerHTML = '';
-  $('historyPanel').classList.remove('open');
-  $('sectionHint').style.display = 'none';
-  const rn = $('repairNotice'); if (rn) rn.classList.remove('active');
-  clearError(); clearPartialNotice(); setStatus('');
-  showPhase('phaseInput');
-}
+function copyFullSong() { if (appState.fullSong) copyText($('copyFullBtn'), appState.fullSong); }
+function copyBuffer() { const text = $('acceptedBufferBody').textContent; if (text) copyText($('copyBufferBtn'), text); }
 </script>
 </body>
 </html>
