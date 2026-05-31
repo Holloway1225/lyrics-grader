@@ -97,6 +97,13 @@ h1 em { font-style: italic; color: var(--signal); }
   font-family: var(--mono);
   font-size: 0.66rem; letter-spacing: 0.14em;
   color: var(--text-3);
+  display: flex; align-items: center; gap: 10px;
+}
+.version-badge {
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-4);
+  border: 1px solid var(--border-2); border-radius: 3px;
+  padding: 2px 7px; display: inline-block;
 }
 
 /* ── PHASE ── */
@@ -399,7 +406,10 @@ footer {
 <header>
   <div class="header-eyebrow"><span class="pulse"></span> Songwriter's Workbench</div>
   <h1>Lyrics <em>Grader</em></h1>
-  <div class="header-sub">Seven-dimension rubric · Per-category path to 10/10 · No rewrites</div>
+  <div class="header-sub">
+    Seven-dimension rubric · Per-category path to 10/10 · No rewrites
+    <span class="version-badge">v1.4</span>
+  </div>
 </header>
 
 <!-- Phase 1: Input -->
@@ -509,7 +519,7 @@ footer {
 
 </div><!-- /wrap -->
 
-<footer>Lyrics Grader · Seven-dimension rubric · Nothing stored server-side</footer>
+<footer>Lyrics Grader v1.4 · Seven-dimension rubric · Nothing stored server-side</footer>
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -539,14 +549,17 @@ function extractJSON(raw) {
 
 // Strip any "such as '…'" / "for example '…'" / ", like '…'" tail the model
 // sneaks into path_to_10 steps despite being told not to.
+// Also catches steps that start with soft openers the model is banned from using.
 function sanitizeStep(step) {
   if (typeof step !== 'string') return step;
-  // Remove trailing example clauses — greedy match from the trigger phrase to end
-  return step
+  let s = step;
+  // Remove trailing example clauses
+  s = s
     .replace(/[,;]?\s*(such as|for example|like|e\.g\.)[^"']*["'][^"']*["'][^"']*$/i, '')
     .replace(/[,;]?\s*(such as|for example|like|e\.g\.).*$/i, '')
     .trim()
-    .replace(/[,;:\s]+$/, '');  // clean trailing punctuation left behind
+    .replace(/[,;:\s]+$/, '');
+  return s;
 }
 
 const DIM_WEIGHTS = [2, 1, 2, 1, 1, 1, 1];
@@ -767,7 +780,10 @@ BANNED STEP LANGUAGE — any step using these words or constructions fails and m
 - "overused" / "a bit clichéd" / "feels familiar" / "been used before" (verdict without diagnosis)
 - "more unique" / "fresher" / "more original" (direction without mechanism)
 - "add more context" / "add more details" / "add more specificity" (direction without naming what)
+- "add a specific personal detail" / "add a unique element" / "incorporate an element" (too vague)
 - "replace with a more unique image or concept" (direction without naming the mechanism)
+- "could be more personalized" / "could be more distinctive" (verdict without diagnosis)
+- "add or emphasize" / "extend the metaphor" without naming which word and what it must do
 - Any step where removing the quoted line would leave a step that applies to a different song
 
 If a dimension is already at 9–10, the steps must still name the one or two lines preventing a clean 10 and diagnose them at the word level.
@@ -854,9 +870,9 @@ The direction ends at the period. No "such as", no "for example", no demonstrati
     }
   ],
   "primary_flags": {
-    "show_vs_tell": "<most abstract telling line verbatim, or 'none'>",
-    "interchangeable": "<most interchangeable line verbatim, or 'none'>",
-    "filler": "<weakest compression line verbatim, or 'none'>"
+    "show_vs_tell": "<the most abstract telling line copied verbatim — the line itself only, no explanation, no em-dash, no annotation after it>",
+    "interchangeable": "<the most replaceable line copied verbatim — the line itself only, no explanation>",
+    "filler": "<the weakest compression line copied verbatim — the line itself only, no explanation>"
   },
   "checklist": {
     "central_idea": "<one sentence: what this song is about>",
@@ -876,6 +892,18 @@ function parseGrade(text) {
   if (!d.verdict) throw new Error('Missing verdict');
   if (!d.primary_flags) d.primary_flags = {};
   if (!d.checklist) d.checklist = {};
+  // Strip any annotation the model appended after the verbatim line in flags
+  // e.g. "'line text' — tells the emotional state rather than showing it"
+  const flagKeys = ['show_vs_tell', 'interchangeable', 'filler'];
+  flagKeys.forEach(k => {
+    if (typeof d.primary_flags[k] === 'string') {
+      // Strip everything after the first em-dash or " — " that follows closing quote
+      d.primary_flags[k] = d.primary_flags[k]
+        .replace(/(['"])\s*[—–-]{1,2}.*$/s, '$1')  // quoted line followed by dash + annotation
+        .replace(/\s*[—–]\s*.*$/s, '')              // bare line followed by em-dash
+        .trim();
+    }
+  });
   // Sanitize path_to_10 steps — strip any "such as '…'" tails the model snuck in
   d.dimensions.forEach(dim => {
     if (Array.isArray(dim.path_to_10)) {
