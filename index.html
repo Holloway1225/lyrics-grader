@@ -408,7 +408,7 @@ footer {
   <h1>Lyrics <em>Grader</em></h1>
   <div class="header-sub">
     Seven-dimension rubric · Per-category path to 10/10 · No rewrites
-    <span class="version-badge">v1.8</span>
+    <span class="version-badge">v1.9</span>
   </div>
 </header>
 
@@ -444,6 +444,14 @@ footer {
     </div>
     <textarea id="lyrics" placeholder="Paste your full lyrics here…" spellcheck="false"></textarea>
     <div class="select-row">
+      <div class="select-group">
+        <span class="select-label">Grader</span>
+        <select id="graderModel">
+          <option value="groq" selected>Llama 3.3 70B — fast, free</option>
+          <option value="claude">Claude Sonnet — deepest diagnosis</option>
+          <option value="gemini">Gemini 2.0 Flash</option>
+        </select>
+      </div>
       <div class="select-group">
         <span class="select-label">Retries on 429</span>
         <select id="retryCount">
@@ -519,7 +527,7 @@ footer {
 
 </div><!-- /wrap -->
 
-<footer>Lyrics Grader v1.8 · Seven-dimension rubric · Nothing stored server-side</footer>
+<footer>Lyrics Grader v1.9 · Seven-dimension rubric · Nothing stored server-side</footer>
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -625,6 +633,11 @@ $('groqKey').addEventListener('input',      e => { try { localStorage.setItem('l
 $('geminiKey').addEventListener('input',    e => { try { localStorage.setItem('lg_gemini',    e.target.value); } catch(_){} });
 $('anthropicKey').addEventListener('input', e => { try { localStorage.setItem('lg_anthropic', e.target.value); } catch(_){} });
 
+(function initGrader() {
+  try { const gm = localStorage.getItem('lg_grader'); if (gm) $('graderModel').value = gm; } catch(_) {}
+})();
+$('graderModel').addEventListener('change', e => { try { localStorage.setItem('lg_grader', e.target.value); } catch(_){} });
+
 (function initHistory() {
   try { const h = sessionStorage.getItem('lg_history'); if (h) state.gradeHistory = JSON.parse(h); } catch(_) {}
 })();
@@ -719,22 +732,30 @@ async function callClaude(key, prompt, signal, retries) {
 }
 async function callAPI(keys, prompt, signal, retries) {
   const errors = [];
-  if (keys.groq) {
-    for (let i = 0; i < GROQ_MODELS.length; i++) {
-      if (signal.aborted) throw new DOMException('Aborted','AbortError');
-      try { return await callGroq(keys.groq, prompt, i, signal, retries); }
-      catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`); if (e.status === 401 || e.status === 403) break; }
+  const pref = (typeof $('graderModel') !== 'undefined' && $('graderModel')) ? $('graderModel').value : 'groq';
+
+  // Build provider order based on user's preferred grader, then fall back to the rest
+  const order = pref === 'claude' ? ['claude', 'groq', 'gemini']
+              : pref === 'gemini' ? ['gemini', 'groq', 'claude']
+              :                     ['groq', 'gemini', 'claude'];
+
+  for (const provider of order) {
+    if (signal.aborted) throw new DOMException('Aborted','AbortError');
+    if (provider === 'groq' && keys.groq) {
+      for (let i = 0; i < GROQ_MODELS.length; i++) {
+        if (signal.aborted) throw new DOMException('Aborted','AbortError');
+        try { return await callGroq(keys.groq, prompt, i, signal, retries); }
+        catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`); if (e.status === 401 || e.status === 403) break; }
+      }
+    } else if (provider === 'gemini' && keys.gemini) {
+      try { return await callGemini(keys.gemini, prompt, signal, retries); }
+      catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Gemini: ${e.message}`); }
+    } else if (provider === 'claude' && keys.anthropic) {
+      try { return await callClaude(keys.anthropic, prompt, signal, retries); }
+      catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Claude: ${e.message}`); }
     }
   }
-  if (keys.gemini && !signal.aborted) {
-    try { return await callGemini(keys.gemini, prompt, signal, retries); }
-    catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Gemini: ${e.message}`); }
-  }
-  if (keys.anthropic && !signal.aborted) {
-    try { return await callClaude(keys.anthropic, prompt, signal, retries); }
-    catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Claude: ${e.message}`); }
-  }
-  throw new Error(errors[errors.length - 1] || 'No API available');
+  throw new Error(errors[errors.length - 1] || 'No API key available for the selected grader.');
 }
 
 // ── Prompt ─────────────────────────────────────────────────────────────────
