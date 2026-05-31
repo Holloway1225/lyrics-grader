@@ -756,10 +756,74 @@ LYRICS:
 ${lyrics}
 ---
 
-Respond ONLY with valid JSON. No markdown fences. No text outside the JSON object.
+Respond ONLY with a valid JSON object. No markdown fences. No commentary before or after. Start your response with { and end with }.
 
-{"overall":<1-10 one decimal>,"dimensions":[{"label":"Emotional Specificity","score":<1-10>,"note":"<1-2 sentences citing strongest and weakest line>","path_to_10":["<verbatim line> — <exact failure at word level> — <command>","<verbatim line> — <exact failure at word level> — <command>"]},{"label":"Imagery & Visual Language","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Concept & Cohesion","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Compression & Subtext","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Prosody & Flow","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Originality & Authenticity","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]},{"label":"Memorability","score":<1-10>,"note":"<1-2 sentences>","path_to_10":["<line> — <failure> — <command>","<line> — <failure> — <command>"]}],"primary_flags":{"show_vs_tell":"<verbatim line only>","interchangeable":"<verbatim line only>","filler":"<verbatim line only>"},"checklist":{"central_idea":"<one sentence>","cohesion":"<yes/partial/no>","imagery_quality":"<fresh/mixed/generic>","prosody_issues":"<verbatim line or none>","most_memorable_line":"<verbatim line>"},"verdict":"<2-3 sentences — biggest thing holding it back, then what it takes to reach next tier>"}`;
-}
+The JSON must match this structure exactly — fill in every placeholder:
+
+{
+  "overall": 0.0,
+  "dimensions": [
+    {
+      "label": "Emotional Specificity",
+      "score": 0,
+      "note": "FILL: 1-2 sentences citing strongest and weakest line verbatim",
+      "path_to_10": [
+        "FILL: verbatim line — the word/phrase X fails because Y in the listener's mind — command",
+        "FILL: verbatim line — the word/phrase X fails because Y in the listener's mind — command"
+      ]
+    },
+    {
+      "label": "Imagery & Visual Language",
+      "score": 0,
+      "note": "FILL",
+      "path_to_10": ["FILL: line — failure — command", "FILL: line — failure — command"]
+    },
+    {
+      "label": "Concept & Cohesion",
+      "score": 0,
+      "note": "FILL",
+      "path_to_10": ["FILL: line — failure — command", "FILL: line — failure — command"]
+    },
+    {
+      "label": "Compression & Subtext",
+      "score": 0,
+      "note": "FILL",
+      "path_to_10": ["FILL: line — failure — command", "FILL: line — failure — command"]
+    },
+    {
+      "label": "Prosody & Flow",
+      "score": 0,
+      "note": "FILL",
+      "path_to_10": ["FILL: line — failure — command", "FILL: line — failure — command"]
+    },
+    {
+      "label": "Originality & Authenticity",
+      "score": 0,
+      "note": "FILL",
+      "path_to_10": ["FILL: line — failure — command", "FILL: line — failure — command"]
+    },
+    {
+      "label": "Memorability",
+      "score": 0,
+      "note": "FILL",
+      "path_to_10": ["FILL: line — failure — command", "FILL: line — failure — command"]
+    }
+  ],
+  "primary_flags": {
+    "show_vs_tell": "FILL: verbatim line only",
+    "interchangeable": "FILL: verbatim line only",
+    "filler": "FILL: verbatim line only"
+  },
+  "checklist": {
+    "central_idea": "FILL: one sentence",
+    "cohesion": "yes",
+    "imagery_quality": "fresh",
+    "prosody_issues": "FILL: verbatim line or none",
+    "most_memorable_line": "FILL: verbatim line"
+  },
+  "verdict": "FILL: 2-3 sentences — biggest thing holding it back, then what it takes to reach next tier"
+}`;}
+
 
 
 // ── Parse ──────────────────────────────────────────────────────────────────
