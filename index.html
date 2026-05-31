@@ -6,1487 +6,568 @@
 <title>Lyrics Grader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --ink:       #0a0908;
-  --paper:     #f0ece4;
-  --paper-2:   #e8e3da;
-  --paper-3:   #ddd7cc;
-  --line:      rgba(10,9,8,0.12);
-  --line-mid:  rgba(10,9,8,0.22);
-  --line-hi:   rgba(10,9,8,0.5);
-  --text:      #0a0908;
-  --text-2:    #4a4540;
-  --text-3:    #8a8278;
-  --text-4:    #b5b0a8;
-  --signal:    #c8350a;       /* transmission red */
-  --signal-bg: rgba(200,53,10,0.07);
-  --signal-line: rgba(200,53,10,0.3);
-  --gold:      #8a6c1a;
-  --gold-bg:   rgba(138,108,26,0.08);
-  --green:     #1a6b3a;
-  --green-bg:  rgba(26,107,58,0.08);
-  --green-line: rgba(26,107,58,0.3);
-  --red:       #8b1a1a;
-  --red-bg:    rgba(139,26,26,0.08);
-  --red-line:  rgba(139,26,26,0.3);
-  --radius:    4px;
-  --mono:      'Space Mono', monospace;
-  --serif:     'Instrument Serif', serif;
-  --sans:      'Instrument Sans', sans-serif;
-  --display:   'Bebas Neue', sans-serif;
+  --bg:        #0c0b0d;
+  --surface:   #111013;
+  --surface-2: #161418;
+  --surface-3: #1c1920;
+  --border:    rgba(255,255,255,0.06);
+  --border-2:  rgba(255,255,255,0.10);
+  --border-3:  rgba(255,255,255,0.18);
+  --text:      #ede8e1;
+  --text-2:    #9b9390;
+  --text-3:    #5a5652;
+  --text-4:    #2e2b28;
+  --signal:    #c8793a;
+  --signal-bg: rgba(200,121,58,0.08);
+  --signal-bd: rgba(200,121,58,0.25);
+  --gold:      #c9a84c;
+  --gold-bg:   rgba(201,168,76,0.08);
+  --gold-bd:   rgba(201,168,76,0.25);
+  --green:     #6aab7e;
+  --green-bg:  rgba(106,171,126,0.08);
+  --green-bd:  rgba(106,171,126,0.25);
+  --red:       #b85c5c;
+  --red-bg:    rgba(184,92,92,0.08);
+  --red-bd:    rgba(184,92,92,0.25);
+  --mono:      'DM Mono', monospace;
+  --serif:     'Lora', serif;
+  --display:   'Playfair Display', serif;
+  --radius:    8px;
 }
 
-html { scroll-behavior: smooth; }
+html { color-scheme: dark; scroll-behavior: smooth; }
+
 body {
-  font-family: var(--sans);
-  background: var(--paper);
+  font-family: var(--serif);
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   font-size: 15px;
-  line-height: 1.6;
-  /* noise overlay */
-  position: relative;
+  line-height: 1.7;
 }
-body::before {
+
+/* grain overlay */
+body::after {
   content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.6;
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.55;
 }
-* { position: relative; z-index: 1; }
 
-button { font-family: inherit; color: inherit; cursor: pointer; }
+button { font-family: inherit; cursor: pointer; }
 
-/* ── LAYOUT ── */
-.layout { max-width: 1100px; margin: 0 auto; }
+.wrap { max-width: 780px; margin: 0 auto; padding: 0 24px 100px; }
 
 /* ── HEADER ── */
 header {
-  border-bottom: 2px solid var(--ink);
-  padding: 0 32px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 24px;
-  min-height: 120px;
+  padding: 52px 0 36px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
 }
-.header-left { padding-bottom: 20px; }
-.header-signal {
+.header-eyebrow {
+  display: flex; align-items: center; gap: 8px;
   font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--signal);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 0.58rem; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--signal); margin-bottom: 14px;
 }
-.signal-dot {
-  width: 6px; height: 6px;
+.pulse {
+  width: 5px; height: 5px; border-radius: 50%;
   background: var(--signal);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse 2.4s ease-in-out infinite;
 }
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.7); }
-}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
+
 h1 {
   font-family: var(--display);
-  font-size: clamp(4rem, 10vw, 7rem);
-  letter-spacing: 0.02em;
-  line-height: 0.9;
-  color: var(--ink);
+  font-size: clamp(2.6rem, 7vw, 4.4rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text);
 }
-h1 em {
-  font-family: var(--serif);
-  font-style: italic;
-  color: var(--signal);
-  letter-spacing: -0.01em;
-}
-.header-right {
-  padding-bottom: 22px;
-  text-align: right;
-}
-.version-badge {
+h1 em { font-style: italic; color: var(--signal); }
+.header-sub {
+  margin-top: 10px;
   font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  font-size: 0.66rem; letter-spacing: 0.14em;
   color: var(--text-3);
-  border: 1px solid var(--line-mid);
-  padding: 3px 8px;
-  border-radius: 2px;
-  display: inline-block;
-  margin-bottom: 6px;
 }
-.header-desc {
-  font-family: var(--sans);
-  font-size: 0.78rem;
-  color: var(--text-3);
-  font-weight: 300;
-  line-height: 1.5;
-  max-width: 220px;
-  margin-left: auto;
-}
-
-/* ── MAIN ── */
-main { padding: 0 32px 80px; }
 
 /* ── PHASE ── */
 .phase { display: none; }
-.phase.active { display: block; animation: slideIn 0.35s ease; }
-@keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.phase.active { display: block; animation: fadeUp .35s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 
-/* ── KEYS PANEL ── */
-.keys-details {
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 0;
-}
+/* ── KEYS ── */
+.keys-details { margin-bottom: 20px; }
 .keys-summary {
-  list-style: none;
-  cursor: pointer;
-  user-select: none;
-  padding: 14px 0;
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: color 0.15s;
+  list-style: none; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text-3); padding: 10px 0; border-top: 1px solid var(--border);
+  transition: color .15s;
 }
 .keys-summary::-webkit-details-marker { display: none; }
 .keys-summary:hover { color: var(--text-2); }
-.keys-summary .chev { margin-left: auto; transition: transform 0.18s; }
+.keys-summary .chev { margin-left: auto; transition: transform .18s; }
 .keys-details[open] .keys-summary .chev { transform: rotate(180deg); }
-.keys-inner {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  padding-bottom: 20px;
+.keys-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 14px 0 18px; }
+@media(max-width:560px){ .keys-grid{ grid-template-columns:1fr; } }
+.key-field label {
+  display: block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 6px;
 }
-@media (max-width: 600px) { .keys-inner { grid-template-columns: 1fr; } }
+.key-field label span { font-size: 0.52rem; opacity: .6; text-transform: none; letter-spacing: 0; font-family: var(--serif); }
+.key-field input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 8px 12px;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--text);
+  outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.key-field input:focus { border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-bg); }
+.key-field input::placeholder { color: var(--text-4); }
 
-/* ── INPUT AREA ── */
-.input-grid {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 0;
-  border-bottom: 1px solid var(--line);
-  min-height: 520px;
+/* ── INPUT CARD ── */
+.input-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 18px;
 }
-@media (max-width: 780px) { .input-grid { grid-template-columns: 1fr; } }
+.field-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 13px 18px; border-bottom: 1px solid var(--border);
+}
+.field-label {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-3);
+}
+.char-count { font-family: var(--mono); font-size: 0.6rem; color: var(--text-4); }
 
-.lyrics-pane {
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
+input[type="text"]#context {
+  width: 100%; background: transparent; border: none; outline: none;
+  padding: 14px 18px; font-family: var(--serif); font-size: 0.9rem; color: var(--text);
+  border-bottom: 1px solid var(--border);
 }
-.pane-label {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  padding: 14px 20px 10px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.char-ct { color: var(--text-4); }
+input[type="text"]#context::placeholder { color: var(--text-3); font-style: italic; }
+
 textarea#lyrics {
-  flex: 1;
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  resize: none;
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  color: var(--text);
-  line-height: 1.9;
-  padding: 20px;
-  min-height: 400px;
+  width: 100%; background: transparent; border: none; outline: none;
+  resize: none; min-height: 260px;
+  padding: 16px 18px;
+  font-family: var(--mono); font-size: 0.82rem; color: var(--text); line-height: 1.9;
 }
-textarea#lyrics::placeholder { color: var(--text-4); font-style: italic; }
+textarea#lyrics::placeholder { color: var(--text-4); }
 
-.side-pane { display: flex; flex-direction: column; }
-
-.side-block {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
+.select-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 18px; border-top: 1px solid var(--border); flex-wrap: wrap;
 }
-.side-block-label {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 8px;
-}
-input[type="text"], input[type="password"] {
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--line);
-  outline: none;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  color: var(--text);
-  padding: 6px 0;
-  transition: border-color 0.15s;
-}
-input:focus { border-bottom-color: var(--signal); }
-input::placeholder { color: var(--text-4); }
-
-.side-hint {
-  font-size: 0.72rem;
-  color: var(--text-3);
-  line-height: 1.5;
-  margin-top: 6px;
-  font-weight: 300;
-}
-.section-label-hint {
-  display: none;
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  color: var(--gold);
-  margin-top: 8px;
-}
-.section-label-hint.visible { display: block; }
-
-/* Controls */
-.controls-block { padding: 16px 20px; border-bottom: 1px solid var(--line); }
-.ctrl-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.ctrl-row:last-of-type { margin-bottom: 0; }
-.ctrl-label {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
+.select-group { display: flex; align-items: center; gap: 8px; }
+.select-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); }
 select {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--line);
-  outline: none;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--text-2);
-  padding: 5px 0;
-  width: 100%;
-  cursor: pointer;
-  transition: border-color 0.15s;
+  background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 5px;
+  padding: 5px 10px; font-family: var(--mono); font-size: 0.7rem; color: var(--text-2);
+  outline: none; cursor: pointer; transition: border-color .15s;
 }
-select:focus { border-bottom-color: var(--signal); }
+select:focus { border-color: var(--signal); }
 
-/* Section chips */
-.section-picker { display: none; }
-.section-picker.visible { display: block; margin-top: 12px; }
-.section-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.section-chip {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 3px 9px;
-  border: 1px solid var(--line-mid);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.15s;
-  color: var(--text-3);
-  background: transparent;
-  user-select: none;
+/* ── GRADE BUTTON ── */
+.grade-btn {
+  width: 100%; padding: 15px 24px;
+  background: var(--signal); border: none; border-radius: 8px;
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: #fff; font-weight: 500;
+  transition: background .15s, transform .1s, box-shadow .15s;
+  box-shadow: 0 4px 24px rgba(200,121,58,0.18);
+  margin-bottom: 10px;
 }
-.section-chip:hover { border-color: var(--line-hi); color: var(--text-2); }
-.section-chip.selected { border-color: var(--signal); color: var(--signal); background: var(--signal-bg); }
+.grade-btn:hover:not(:disabled) { background: #d8854a; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(200,121,58,0.28); }
+.grade-btn:active:not(:disabled) { transform: translateY(0); }
+.grade-btn:disabled { opacity: .38; cursor: not-allowed; box-shadow: none; }
 
-/* Action buttons */
-.action-pane {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: auto;
+.cancel-btn {
+  display: none; width: 100%; padding: 10px;
+  background: transparent; border: 1px solid var(--border-2); border-radius: 7px;
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-3); transition: border-color .15s, color .15s;
 }
-.btn-primary {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--ink);
-  border: none;
-  color: var(--paper);
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  border-radius: var(--radius);
-  transition: background 0.15s, transform 0.1s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.btn-primary:hover:not(:disabled) { background: #1e1b17; transform: translateY(-1px); }
-.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-primary .btn-sub {
-  font-size: 0.55rem;
-  opacity: 0.5;
-  letter-spacing: 0.1em;
-  text-transform: none;
-  font-style: italic;
-}
-.btn-secondary {
-  width: 100%;
-  padding: 12px 16px;
-  background: transparent;
-  border: 1px solid var(--line-mid);
-  color: var(--text-2);
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  border-radius: var(--radius);
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.btn-secondary:hover:not(:disabled) { border-color: var(--line-hi); color: var(--text); }
-.btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-cancel-sm {
-  width: 100%;
-  padding: 9px;
-  background: transparent;
-  border: 1px solid var(--red-line);
-  color: var(--red);
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  border-radius: var(--radius);
-  transition: all 0.15s;
-  display: none;
-}
-.btn-cancel-sm.visible { display: block; }
-.btn-cancel-sm:hover { background: var(--red-bg); }
+.cancel-btn.visible { display: block; }
+.cancel-btn:hover { border-color: var(--red-bd); color: var(--red); }
 
-/* ── STATUS ── */
+/* ── STATUS / ERROR ── */
 .status-bar {
-  display: none;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  background: var(--paper-2);
-  border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--text-2);
+  display: none; align-items: center; gap: 12px;
+  padding: 13px 18px; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 16px;
+  font-family: var(--mono); font-size: 0.66rem; color: var(--text-2);
 }
 .status-bar.active { display: flex; }
-.spinner {
-  width: 12px; height: 12px;
-  border: 1.5px solid var(--line-mid);
-  border-top-color: var(--signal);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.status-step {
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  color: var(--signal);
-  background: var(--signal-bg);
-  padding: 2px 7px;
-  border-radius: 2px;
-}
-.status-attempt { margin-left: auto; color: var(--text-4); }
+.spinner { width: 13px; height: 13px; border: 1.5px solid var(--border-2); border-top-color: var(--signal); border-radius: 50%; animation: spin .75s linear infinite; flex-shrink: 0; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.status-attempt { margin-left: auto; color: var(--text-3); font-size: 0.6rem; }
 
-/* ── ERROR ── */
 .error-box {
-  display: none;
-  padding: 12px 20px;
-  background: var(--red-bg);
-  border-left: 3px solid var(--red-line);
-  color: var(--red);
-  font-size: 0.83rem;
-  line-height: 1.6;
+  display: none; padding: 13px 16px;
+  background: var(--red-bg); border: 1px solid var(--red-bd); border-radius: var(--radius);
+  color: var(--red); font-size: 0.85rem; line-height: 1.6; margin-bottom: 16px;
 }
 .error-box.active { display: block; }
-.error-detail { font-family: var(--mono); font-size: 0.7rem; opacity: 0.6; margin-top: 4px; }
+.error-detail { font-family: var(--mono); font-size: 0.72rem; opacity: .65; margin-top: 5px; }
 
-/* ── RESULTS HEADER ── */
-.results-head {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 24px;
-  align-items: end;
-  padding: 28px 0 20px;
-  border-bottom: 2px solid var(--ink);
-  margin-bottom: 0;
-}
-.results-song-label {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 6px;
-}
-.results-context-text {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1.1rem;
-  color: var(--text-2);
-}
-.grade-block { text-align: right; }
-.grade-num {
-  font-family: var(--display);
-  font-size: 6rem;
-  line-height: 0.85;
-  letter-spacing: 0.01em;
-  color: var(--ink);
-}
-.grade-num.high { color: var(--green); }
-.grade-num.mid  { color: var(--gold); }
-.grade-num.low  { color: var(--red); }
-.grade-denom { font-family: var(--mono); font-size: 0.7rem; color: var(--text-3); }
-.grade-model { font-family: var(--mono); font-size: 0.58rem; color: var(--text-4); margin-top: 4px; }
-.grade-delta {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  margin-top: 4px;
-}
-.grade-delta.up   { color: var(--green); }
-.grade-delta.down { color: var(--red); }
-.grade-delta.same { color: var(--text-3); }
+/* ── RESULTS ── */
 
-/* ── DELTA BANNER ── */
-.delta-bar {
-  display: none;
-  gap: 16px;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+/* score header */
+.results-header {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;
+  padding-bottom: 24px; border-bottom: 1px solid var(--border-2); margin-bottom: 0;
   flex-wrap: wrap;
 }
+.results-left h2 {
+  font-family: var(--display); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--text); margin-bottom: 4px;
+}
+.results-model { font-family: var(--mono); font-size: 0.58rem; color: var(--text-3); }
+.overall-block { text-align: right; }
+.overall-num {
+  font-family: var(--display); font-size: 4.8rem; font-weight: 900;
+  line-height: 1; letter-spacing: -0.03em;
+}
+.overall-num.hi  { color: var(--green); }
+.overall-num.mid { color: var(--gold); }
+.overall-num.lo  { color: var(--red); }
+.overall-denom { font-family: var(--mono); font-size: 0.68rem; color: var(--text-3); }
+.overall-delta { font-family: var(--mono); font-size: 0.64rem; margin-top: 3px; }
+.overall-delta.up   { color: var(--green); }
+.overall-delta.down { color: var(--red); }
+.overall-delta.same { color: var(--text-3); }
+
+/* delta bar */
+.delta-bar { display: none; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .delta-bar.active { display: flex; }
-.delta-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-4); }
-.delta-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.delta-chip {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  padding: 3px 9px;
-  border-radius: 2px;
-  border: 1px solid var(--line);
-  color: var(--text-3);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.delta-chip .lbl { font-size: 0.55rem; opacity: 0.6; }
-.delta-chip .val.up   { color: var(--green); }
-.delta-chip .val.down { color: var(--red); }
-.delta-chip .val.same { color: var(--text-4); }
+.delta-bar-label { font-family: var(--mono); font-size: 0.57rem; letter-spacing: .16em; text-transform: uppercase; color: var(--text-3); }
+.delta-chip { display: flex; align-items: center; gap: 4px; padding: 3px 9px; border: 1px solid var(--border-2); border-radius: 4px; font-family: var(--mono); font-size: 0.6rem; color: var(--text-3); }
+.delta-chip .dlbl { opacity: .55; font-size: 0.55rem; }
+.delta-chip .dval.up   { color: var(--green); }
+.delta-chip .dval.down { color: var(--red); }
 
-/* ── PARTIAL / REPAIR NOTICES ── */
-.notice {
-  display: none;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--gold);
-}
-.notice.active { display: block; }
-
-/* ── HISTORY ── */
-.history-row {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-}
-.history-row.visible { display: flex; }
-.history-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-4); }
-.btn-hist {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: transparent;
-  border: 1px solid var(--line-mid);
-  color: var(--text-3);
-  padding: 4px 10px;
-  border-radius: 2px;
-  transition: all 0.15s;
-}
-.btn-hist:hover { border-color: var(--line-hi); color: var(--text-2); }
-.history-panel { display: none; border-bottom: 1px solid var(--line); }
+/* session history */
+.history-row { display: none; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.history-row.vis { display: flex; }
+.history-label { font-family: var(--mono); font-size: 0.57rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.btn-hist { background: transparent; border: 1px solid var(--border-2); border-radius: 5px; padding: 4px 11px; font-family: var(--mono); font-size: 0.57rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); transition: all .15s; }
+.btn-hist:hover { border-color: var(--border-3); color: var(--text-2); }
+.history-panel { display: none; border-bottom: 1px solid var(--border); }
 .history-panel.open { display: block; }
-.history-entry {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-.history-entry:hover { opacity: 0.65; }
-.history-entry:last-child { border-bottom: none; }
-.hist-num { font-family: var(--mono); font-size: 0.62rem; color: var(--text-4); min-width: 18px; }
-.hist-score { font-family: var(--display); font-size: 1.5rem; color: var(--ink); min-width: 46px; line-height: 1; }
+.hist-entry { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity .15s; }
+.hist-entry:hover { opacity: .65; }
+.hist-entry:last-child { border-bottom: none; }
+.hist-num { font-family: var(--mono); font-size: 0.6rem; color: var(--text-3); min-width: 18px; }
+.hist-score { font-family: var(--display); font-size: 1.3rem; font-weight: 700; color: var(--signal); min-width: 44px; }
 .hist-meta { flex: 1; }
-.hist-meta-top { font-size: 0.8rem; color: var(--text-2); }
-.hist-meta-time { font-family: var(--mono); font-size: 0.58rem; color: var(--text-4); }
-.hist-delta { font-family: var(--mono); font-size: 0.62rem; padding: 2px 7px; border-radius: 2px; border: 1px solid var(--line); }
+.hist-top { font-family: var(--serif); font-size: 0.82rem; color: var(--text-2); }
+.hist-time { font-family: var(--mono); font-size: 0.58rem; color: var(--text-3); }
+.hist-delta { font-family: var(--mono); font-size: 0.6rem; padding: 2px 7px; border: 1px solid var(--border-2); border-radius: 3px; }
 .hist-delta.up   { color: var(--green); }
 .hist-delta.down { color: var(--red); }
-.hist-delta.same { color: var(--text-4); }
+.hist-delta.same { color: var(--text-3); }
 
-/* ── SCORE GRID ── */
-.score-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  border-top: 1px solid var(--line);
-}
-@media (max-width: 900px) { .score-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 500px) { .score-grid { grid-template-columns: repeat(2, 1fr); } }
-.score-cell {
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  padding: 16px 14px;
-  position: relative;
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(8px);
-  animation: cellIn 0.3s ease forwards;
-}
-.score-cell:last-child { border-right: none; }
-@keyframes cellIn { to { opacity: 1; transform: translateY(0); } }
-.score-fill-bg {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: var(--signal-bg);
-  height: 0;
-  transition: height 1s cubic-bezier(0.16,1,0.3,1);
-}
-.score-cell-label {
-  font-family: var(--mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-.score-cell-num {
-  font-family: var(--display);
-  font-size: 2.2rem;
-  line-height: 0.9;
-  color: var(--ink);
-}
-.score-cell-note {
-  font-size: 0.73rem;
-  color: var(--text-2);
-  margin-top: 7px;
-  line-height: 1.5;
-  font-weight: 300;
-}
-.score-delta { font-family: var(--mono); font-size: 0.58rem; margin-top: 3px; }
-.score-delta.up   { color: var(--green); }
-.score-delta.down { color: var(--red); }
-
-/* ── VERDICT ── */
-.verdict-block {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+/* verdict */
+.verdict-section {
   padding: 24px 0;
-  display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 24px;
-}
-.verdict-eyebrow {
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--signal);
-  padding-top: 4px;
+  border-bottom: 1px solid var(--border);
 }
 .verdict-text {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1.15rem;
-  line-height: 1.75;
-  color: var(--text);
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.06rem; line-height: 1.85; color: var(--text-2);
 }
 
-/* ── FLAGS ── */
-.flags-block {
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-@media (max-width: 600px) { .flags-block { grid-template-columns: 1fr; } }
-.flag-cell {
-  padding: 16px;
-  border-right: 1px solid var(--line);
-}
-.flag-cell:last-child { border-right: none; }
-.flag-type {
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--red);
-  margin-bottom: 7px;
-  opacity: 0.8;
-}
-.flag-quote {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 0.92rem;
-  color: var(--red);
-  line-height: 1.5;
-}
+/* flags */
+.flags-section { border-bottom: 1px solid var(--border); padding: 16px 0; }
+.flags-head { font-family: var(--mono); font-size: 0.57rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+.flags-grid { display: flex; flex-direction: column; gap: 7px; }
+.flag-item { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; background: var(--red-bg); border-left: 2px solid var(--red-bd); border-radius: 5px; }
+.flag-type { font-family: var(--mono); font-size: 0.54rem; letter-spacing: .16em; text-transform: uppercase; color: var(--red); opacity: .75; }
+.flag-quote { font-family: var(--serif); font-style: italic; font-size: 0.87rem; color: var(--red); line-height: 1.5; }
 
-/* ── CHECKLIST ── */
-.checklist-block {
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-}
-@media (max-width: 800px) { .checklist-block { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 500px) { .checklist-block { grid-template-columns: 1fr 1fr; } }
-.checklist-cell {
-  padding: 16px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-.checklist-cell:last-child { border-right: none; }
-.cl-label {
-  font-family: var(--mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-4);
-  margin-bottom: 6px;
-}
-.cl-val {
-  font-size: 0.82rem;
-  color: var(--text);
-  line-height: 1.5;
-  font-weight: 300;
-}
-.cl-badge {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 2px;
-  border: 1px solid currentColor;
-  margin-bottom: 4px;
-}
+/* checklist */
+.checklist-section { border-bottom: 1px solid var(--border); padding: 16px 0; }
+.section-title { font-family: var(--mono); font-size: 0.57rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); margin-bottom: 12px; }
+.checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media(max-width:500px){ .checklist-grid{ grid-template-columns:1fr; } }
+.cl-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; }
+.cl-label { font-family: var(--mono); font-size: 0.55rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+.cl-val { font-family: var(--serif); font-size: 0.87rem; color: var(--text); line-height: 1.5; }
+.cl-val.italic { font-style: italic; }
+.cl-badge { display: inline-block; font-family: var(--mono); font-size: 0.53rem; letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; border: 1px solid currentColor; }
 .cl-badge.yes, .cl-badge.fresh   { color: var(--green); }
 .cl-badge.partial, .cl-badge.mixed { color: var(--gold); }
 .cl-badge.no, .cl-badge.generic  { color: var(--red); }
-.cl-memorable {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 0.9rem;
-  color: var(--signal);
+
+/* ── DIMENSION CARDS ── */
+.dims-section { padding: 24px 0; }
+.dims-title { font-family: var(--mono); font-size: 0.57rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); margin-bottom: 16px; }
+.dim-card {
+  border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; margin-bottom: 14px;
+  opacity: 0; transform: translateY(8px);
+  animation: cardIn .35s ease forwards;
+}
+@keyframes cardIn { to{opacity:1;transform:translateY(0)} }
+
+.dim-card-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.dim-score-block { flex-shrink: 0; }
+.dim-score {
+  font-family: var(--display); font-weight: 900;
+  font-size: 2.6rem; line-height: 1; letter-spacing: -0.02em;
+}
+.dim-score.hi  { color: var(--green); }
+.dim-score.mid { color: var(--gold); }
+.dim-score.lo  { color: var(--red); }
+.dim-score-sub { font-family: var(--mono); font-size: 0.52rem; color: var(--text-3); }
+.dim-title-block { flex: 1; }
+.dim-label { font-family: var(--display); font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin-bottom: 3px; }
+.dim-bar-wrap { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; width: 100%; margin-top: 6px; }
+.dim-bar-fill { height: 100%; border-radius: 2px; width: 0; transition: width 1.1s cubic-bezier(.16,1,.3,1); }
+.dim-delta-badge { flex-shrink: 0; font-family: var(--mono); font-size: 0.6rem; padding: 3px 8px; border-radius: 4px; }
+.dim-delta-badge.up   { color: var(--green); background: var(--green-bg); border: 1px solid var(--green-bd); }
+.dim-delta-badge.down { color: var(--red);   background: var(--red-bg);   border: 1px solid var(--red-bd); }
+
+.dim-card-body { background: var(--surface-2); }
+
+.dim-note-block { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.dim-note-label { font-family: var(--mono); font-size: 0.53rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); margin-bottom: 5px; }
+.dim-note-text { font-family: var(--serif); font-size: 0.9rem; color: var(--text-2); line-height: 1.65; }
+
+.dim-path-block { padding: 16px 20px; }
+.dim-path-label {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 0.53rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--signal); margin-bottom: 10px;
+}
+.path-icon { font-size: 0.8rem; }
+.dim-path-list { list-style: none; counter-reset: pc; display: flex; flex-direction: column; gap: 8px; }
+.dim-path-list li {
+  counter-increment: pc;
+  display: flex; gap: 12px; align-items: flex-start;
+  font-family: var(--serif); font-size: 0.87rem; color: var(--text-2); line-height: 1.6;
+}
+.dim-path-list li::before {
+  content: counter(pc);
+  font-family: var(--mono); font-size: 0.62rem; color: var(--signal);
+  background: var(--signal-bg); border: 1px solid var(--signal-bd);
+  min-width: 20px; height: 20px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px;
 }
 
-/* ── SECTION HEADING ── */
-.section-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding: 20px 0 14px;
-  border-bottom: 1px solid var(--line);
-}
-.section-heading h2 {
-  font-family: var(--display);
-  font-size: 2rem;
-  letter-spacing: 0.03em;
-  line-height: 1;
-}
-.section-tag {
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 2px;
-  border: 1px solid var(--line-mid);
-  color: var(--text-3);
-}
-.section-tag.signal { color: var(--signal); border-color: var(--signal-line); background: var(--signal-bg); }
-.section-tag.green  { color: var(--green);  border-color: var(--green-line);  background: var(--green-bg); }
-
-/* ── MASTER REWRITER BANNER ── */
-.master-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
-}
-.master-mark {
-  font-family: var(--display);
-  font-size: 1.4rem;
-  color: var(--signal);
-  flex-shrink: 0;
-  line-height: 1;
-}
-.master-label {
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--signal);
-  margin-bottom: 2px;
-}
-.master-desc { font-size: 0.78rem; color: var(--text-2); font-weight: 300; }
-
-/* ── SURGICAL PAIRS ── */
-.rewrite-pair {
-  border-bottom: 1px solid var(--line);
-  padding: 24px 0;
-}
-.rewrite-pair:last-child { border-bottom: none; }
-
-.world-anchor {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--gold);
-  border: 1px solid rgba(138,108,26,0.3);
-  background: var(--gold-bg);
-  padding: 3px 8px;
-  border-radius: 2px;
-  margin-bottom: 10px;
-}
-.auto-repaired-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  border: 1px solid var(--line-mid);
-  padding: 3px 8px;
-  border-radius: 2px;
-  margin-bottom: 10px;
-}
-.structural-role {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 0.78rem;
-  color: var(--text-3);
-  font-weight: 300;
-  font-style: italic;
-  margin-bottom: 12px;
-}
-.structural-role-label {
-  font-family: var(--mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-4);
-  font-style: normal;
-  flex-shrink: 0;
-}
-.line-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-.line-block { padding: 14px 16px; position: relative; }
-.line-tag {
-  font-family: var(--mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  opacity: 0.5;
-  margin-bottom: 5px;
-}
-.line-text { font-size: 0.87rem; line-height: 1.65; }
-.line-before { background: var(--red-bg); }
-.line-before .line-tag { color: var(--red); }
-.line-before .line-text { color: var(--red); }
-.line-after  { background: var(--green-bg); }
-.line-after .line-tag  { color: var(--green); }
-.line-after .line-text { color: var(--green); }
-.line-accepted { background: rgba(30,80,200,0.06); border-left: 2px solid rgba(30,80,200,0.3); }
-.line-accepted .line-tag  { color: #3a5ab0; }
-.line-accepted .line-text { color: #2a4a9e; }
-
-.copy-line-btn {
-  position: absolute;
-  top: 8px; right: 8px;
-  background: rgba(10,9,8,0.04);
-  border: 1px solid var(--line-mid);
-  border-radius: 2px;
-  padding: 2px 7px;
-  font-family: var(--mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  transition: all 0.15s;
-}
-.copy-line-btn:hover { background: rgba(10,9,8,0.08); color: var(--text); }
-.copy-line-btn.copied { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
-
-.why-block {
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  font-size: 0.78rem;
-  color: var(--text-2);
-  font-style: italic;
-  line-height: 1.6;
-  margin-bottom: 10px;
-  position: relative;
-}
-.why-block::before { content: '↳ '; color: var(--signal); font-style: normal; opacity: 0.5; }
-
-.violation-warn {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--red-bg);
-  border-left: 2px solid var(--red-line);
-  border-radius: var(--radius);
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  color: var(--red);
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-.syn-warn {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--gold-bg);
-  border-left: 2px solid rgba(138,108,26,0.3);
-  border-radius: var(--radius);
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  color: var(--gold);
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-
-.rewrite-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.btn-accept {
-  padding: 5px 13px;
-  background: transparent;
-  border: 1px solid var(--green-line);
-  border-radius: 2px;
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--green);
-  transition: all 0.15s;
-}
-.btn-accept:hover:not(:disabled) { background: var(--green-bg); }
-.btn-accept.accepted { background: var(--green-bg); }
-.btn-accept:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-skip {
-  padding: 5px 13px;
-  background: transparent;
-  border: 1px solid var(--line-mid);
-  border-radius: 2px;
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  transition: all 0.15s;
-}
-.btn-skip:hover:not(:disabled) { border-color: var(--line-hi); color: var(--text); }
-.btn-skip:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-regen {
-  padding: 5px 13px;
-  background: transparent;
-  border: 1px solid rgba(138,108,26,0.25);
-  border-radius: 2px;
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold);
-  opacity: 0.75;
-  transition: all 0.15s;
-}
-.btn-regen:hover:not(:disabled) { opacity: 1; background: var(--gold-bg); }
-.btn-regen:disabled { opacity: 0.25; cursor: not-allowed; }
-.syl-badge {
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  padding: 3px 7px;
-  border-radius: 2px;
-  border: 1px solid var(--line);
-  color: var(--text-3);
-}
-.syl-badge.ok   { color: var(--text-4); }
-.syl-badge.warn { color: var(--gold); border-color: rgba(138,108,26,0.3); background: var(--gold-bg); }
-.syl-badge.fail { color: var(--red); border-color: var(--red-line); background: var(--red-bg); }
-.applied-badge {
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #3a5ab0;
-  border: 1px solid rgba(30,80,200,0.2);
-  background: rgba(30,80,200,0.05);
-  padding: 3px 7px;
-  border-radius: 2px;
-}
-
-/* ── COPY ALL ── */
-.copy-all-row { display: flex; justify-content: flex-end; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.btn-copy-all {
-  padding: 6px 13px;
-  background: transparent;
-  border: 1px solid var(--line-mid);
-  border-radius: 2px;
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  transition: all 0.15s;
-}
-.btn-copy-all:hover { border-color: var(--line-hi); color: var(--text-2); }
-.btn-copy-all.copied { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
-
-/* ── ACCEPTED BUFFER ── */
-.buffer-block { display: none; border-top: 1px solid var(--line); padding: 20px 0 0; }
-.buffer-block.visible { display: block; }
-.buffer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.buffer-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: #3a5ab0; }
-.btn-copy-buf {
-  padding: 5px 11px;
-  background: transparent;
-  border: 1px solid rgba(30,80,200,0.2);
-  border-radius: 2px;
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #3a5ab0;
-  transition: all 0.15s;
-}
-.btn-copy-buf:hover { background: rgba(30,80,200,0.06); }
-.btn-copy-buf.copied { background: rgba(30,80,200,0.1); }
-.buffer-body {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  line-height: 1.9;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  padding: 16px;
-  border: 1px solid rgba(30,80,200,0.2);
-  border-radius: var(--radius);
-  background: rgba(30,80,200,0.04);
-}
-
-/* ── FULL REWRITE ── */
-.full-rewrite-wrap {
-  border: 1px solid var(--green-line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.full-rewrite-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--green-line);
-  background: var(--green-bg);
-}
-.full-rewrite-title {
-  font-family: var(--mono);
-  font-size: 0.57rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--green);
-}
-.btn-copy-full {
-  padding: 5px 11px;
-  background: transparent;
-  border: 1px solid var(--green-line);
-  border-radius: 2px;
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--green);
-  transition: all 0.15s;
-}
-.btn-copy-full:hover { background: var(--green-bg); }
-.btn-copy-full.copied { background: var(--green-bg); }
-.full-rewrite-body {
-  padding: 20px;
-  font-family: var(--mono);
-  font-size: 0.83rem;
-  line-height: 2.0;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* ── ACTIONS LIST ── */
-.actions-list {
-  list-style: none;
-  counter-reset: ac;
-}
-.actions-list li {
-  counter-increment: ac;
-  display: flex;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.86rem;
-  color: var(--text-2);
-  line-height: 1.65;
-  font-weight: 300;
-  align-items: flex-start;
-}
-.actions-list li:last-child { border-bottom: none; }
-.actions-list li::before {
-  content: counter(ac, decimal-leading-zero);
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--signal);
-  min-width: 20px;
-  margin-top: 4px;
-  flex-shrink: 0;
+/* perfect badge */
+.perfect-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 5px;
+  border: 1px solid var(--green-bd); background: var(--green-bg);
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: .12em; text-transform: uppercase; color: var(--green);
 }
 
 /* ── BOTTOM ACTIONS ── */
-.bottom-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  padding: 28px 0 0;
-  border-top: 1px solid var(--line);
-  margin-top: 28px;
-  flex-wrap: wrap;
-}
-.btn-regrade {
-  padding: 11px 28px;
-  background: var(--ink);
-  border: none;
-  color: var(--paper);
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  border-radius: var(--radius);
-  transition: all 0.15s;
-}
-.btn-regrade:hover { background: #1e1b17; transform: translateY(-1px); }
-.btn-reset {
-  padding: 11px 28px;
-  background: transparent;
-  border: 1px solid var(--line-mid);
-  color: var(--text-3);
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  border-radius: var(--radius);
-  transition: all 0.15s;
-}
-.btn-reset:hover { border-color: var(--line-hi); color: var(--text-2); }
+.bottom-row { display: flex; gap: 12px; justify-content: center; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.btn-regrade { padding: 11px 28px; background: var(--signal-bg); border: 1px solid var(--signal-bd); border-radius: 7px; font-family: var(--mono); font-size: 0.62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--signal); transition: all .15s; }
+.btn-regrade:hover { background: rgba(200,121,58,0.15); }
+.btn-reset { padding: 11px 28px; background: transparent; border: 1px solid var(--border-2); border-radius: 7px; font-family: var(--mono); font-size: 0.62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); transition: all .15s; }
+.btn-reset:hover { border-color: var(--border-3); color: var(--text-2); }
 
-/* ── FOOTER ── */
 footer {
-  border-top: 1px solid var(--line);
-  padding: 16px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.footer-sig { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-4); }
-.footer-signal {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--signal);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  text-align: center; padding: 20px;
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: .1em; color: var(--text-4);
+  border-top: 1px solid var(--border);
 }
 </style>
 </head>
 <body>
-
-<div class="layout">
+<div class="wrap">
 
 <header>
-  <div class="header-left">
-    <div class="header-signal">
-      <span class="signal-dot"></span>
-      Songwriter's Workbench
-    </div>
-    <h1>LYRICS<br><em>Grader</em></h1>
-  </div>
-  <div class="header-right">
-    <div class="version-badge">v4.0</div>
-    <div class="header-desc">Grade. Fix. Delta-track. Accept or regenerate line by line.</div>
-  </div>
+  <div class="header-eyebrow"><span class="pulse"></span> Songwriter's Workbench</div>
+  <h1>Lyrics <em>Grader</em></h1>
+  <div class="header-sub">Seven-dimension rubric · Per-category path to 10/10 · No rewrites</div>
 </header>
-
-<main>
 
 <!-- Phase 1: Input -->
 <div class="phase active" id="phaseInput">
 
   <details class="keys-details">
     <summary class="keys-summary">API Keys <span class="chev">▾</span></summary>
-    <div class="keys-inner">
-      <div>
-        <div class="side-block-label">Groq — grading</div>
+    <div class="keys-grid">
+      <div class="key-field">
+        <label>Groq <span>— primary grader</span></label>
         <input type="password" id="groqKey" placeholder="gsk_…" autocomplete="off" spellcheck="false" />
       </div>
-      <div>
-        <div class="side-block-label">Anthropic — rewrites</div>
-        <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
-      </div>
-      <div>
-        <div class="side-block-label">Gemini — fallback</div>
+      <div class="key-field">
+        <label>Gemini <span>— fallback</span></label>
         <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="key-field">
+        <label>Anthropic <span>— fallback</span></label>
+        <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
       </div>
     </div>
   </details>
 
-  <div class="input-grid">
-    <div class="lyrics-pane">
-      <div class="pane-label">
-        <span>Lyrics</span>
-        <span class="char-ct" id="charCount">0</span>
-      </div>
-      <textarea id="lyrics" placeholder="Paste your full lyrics here…&#10;&#10;Use [Verse 1] / [Chorus] labels to unlock section targeting." spellcheck="false"></textarea>
+  <div class="input-card">
+    <div class="field-head">
+      <span class="field-label">Genre / Theme / Context</span>
     </div>
-
-    <div class="side-pane">
-      <div class="side-block">
-        <div class="side-block-label">Genre / Theme / Context</div>
-        <input type="text" id="context" placeholder="Dark glitch metal, AI takeover, dissociation…" maxlength="1000" />
-        <div class="side-hint">Paste a Suno theme prompt or write genre + emotional register + craft priority. More context = sharper grade.</div>
-        <div class="section-label-hint" id="sectionLabelHint"></div>
-      </div>
-
-      <div class="controls-block">
-        <div class="ctrl-row">
-          <span class="ctrl-label">Lines to fix</span>
-          <select id="lineCount">
-            <option value="1">1 weakest</option>
-            <option value="2">2 weakest</option>
-            <option value="3" selected>3 weakest</option>
-            <option value="5">5 weakest</option>
-            <option value="all">All flagged</option>
-          </select>
-        </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label">Rewrite scope</span>
-          <select id="rewriteScope">
-            <option value="full">Full song</option>
-            <option value="sections">Select sections</option>
-          </select>
-        </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label">Retries on 429</span>
-          <select id="retryCount">
-            <option value="0">None</option>
-            <option value="2" selected>2×</option>
-            <option value="4">4×</option>
-          </select>
-        </div>
-        <div class="section-picker" id="sectionPicker">
-          <div class="ctrl-label" style="margin-bottom:6px">Sections</div>
-          <div class="section-chips" id="sectionChips">
-            <span class="section-chip selected" data-section="all" id="allSectionsChip">All</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="action-pane">
-        <button class="btn-primary" id="surgicalBtn">
-          <span>Surgical Fix</span>
-          <span class="btn-sub">Grade + rewrite weakest lines</span>
-        </button>
-        <button class="btn-secondary" id="fullBtn">
-          <span>Full Rewrite</span>
-          <span class="btn-sub" style="font-size:.55rem;opacity:.5;letter-spacing:.1em;text-transform:none;font-style:italic">Grade + rewrite to 10/10</span>
-        </button>
-        <button class="btn-cancel-sm" id="cancelBtn">✕ Cancel</button>
+    <input type="text" id="context" placeholder="e.g. Indie folk, grief and stagnation — or paste your Suno theme prompt" maxlength="1000" />
+    <div class="field-head" style="border-top:1px solid var(--border)">
+      <span class="field-label">Lyrics</span>
+      <span class="char-count" id="charCount">0</span>
+    </div>
+    <textarea id="lyrics" placeholder="Paste your full lyrics here…" spellcheck="false"></textarea>
+    <div class="select-row">
+      <div class="select-group">
+        <span class="select-label">Retries on 429</span>
+        <select id="retryCount">
+          <option value="0">None</option>
+          <option value="2" selected>2×</option>
+          <option value="4">4×</option>
+        </select>
       </div>
     </div>
   </div>
+
+  <button class="grade-btn" id="gradeBtn">Grade These Lyrics</button>
+  <button class="cancel-btn" id="cancelBtn">✕ Cancel</button>
 
 </div>
 
 <!-- Phase 2: Results -->
 <div class="phase" id="phaseResults">
 
-  <div class="results-head">
-    <div>
-      <div class="results-song-label">Context</div>
-      <div class="results-context-text" id="resultsContext">—</div>
+  <div class="results-header">
+    <div class="results-left">
+      <h2 id="resultsTitle">Grade</h2>
+      <div class="results-model" id="modelTag"></div>
     </div>
-    <div class="grade-block">
-      <div class="grade-num" id="overallNum">—</div>
-      <div class="grade-denom">/10 overall</div>
-      <div class="grade-model" id="modelTag"></div>
-      <div class="grade-delta" id="overallDelta"></div>
+    <div class="overall-block">
+      <div class="overall-num" id="overallNum">—</div>
+      <div class="overall-denom">/10 overall</div>
+      <div class="overall-delta" id="overallDelta"></div>
     </div>
   </div>
 
   <div class="delta-bar" id="deltaBanner"></div>
-  <div class="notice" id="partialNotice"></div>
-  <div class="notice" id="repairNotice"></div>
 
   <div class="history-row" id="historyRow">
     <span class="history-label" id="historyLabel"></span>
-    <button class="btn-hist" id="historyToggleBtn">Session History</button>
+    <button class="btn-hist" id="histBtn">Session History</button>
   </div>
   <div class="history-panel" id="historyPanel"></div>
 
-  <div class="score-grid" id="scoreGrid"></div>
-
-  <div class="verdict-block">
-    <div class="verdict-eyebrow">Verdict</div>
+  <div class="verdict-section">
     <div class="verdict-text" id="verdictText"></div>
   </div>
 
-  <div class="flags-block" id="primaryFlags"></div>
-
-  <div id="checklistBlock" class="checklist-block"></div>
-
-  <!-- Surgical -->
-  <div id="surgicalSection" style="display:none">
-    <div class="section-heading">
-      <h2>SURGICAL FIXES</h2>
-      <span class="section-tag signal" id="surgicalCountTag">—</span>
-    </div>
-    <div class="master-banner">
-      <div class="master-mark">✦</div>
-      <div>
-        <div class="master-label">World-Class Master Rewriter</div>
-        <div class="master-desc" id="surgicalMasterDesc">Weakest lines rewritten using the song's own imagery.</div>
-      </div>
-    </div>
-    <div class="copy-all-row">
-      <button class="btn-copy-all" id="copyAllBtn">Copy All Rewrites</button>
-    </div>
-    <div id="rewriteResultsList"></div>
-    <div class="buffer-block" id="acceptedBuffer">
-      <div class="buffer-head">
-        <span class="buffer-label">Applied Lyrics</span>
-        <button class="btn-copy-buf" id="copyBufferBtn">Copy</button>
-      </div>
-      <div class="buffer-body" id="acceptedBufferBody"></div>
-    </div>
+  <div class="flags-section" id="flagsSection">
+    <div class="flags-head">Primary failure modes</div>
+    <div class="flags-grid" id="flagsGrid"></div>
   </div>
 
-  <!-- Full -->
-  <div id="fullSection" style="display:none">
-    <div class="section-heading">
-      <h2>FULL REWRITE</h2>
-      <span class="section-tag green" id="fullScopeTag">Full Song</span>
-    </div>
-    <div class="master-banner">
-      <div class="master-mark">✦</div>
-      <div>
-        <div class="master-label">World-Class Master Rewriter</div>
-        <div class="master-desc" id="fullMasterDesc">Every weak line elevated. Strong lines preserved. Same world, sharper language.</div>
-      </div>
-    </div>
-    <div class="full-rewrite-wrap">
-      <div class="full-rewrite-head">
-        <span class="full-rewrite-title">Rewritten Song</span>
-        <button class="btn-copy-full" id="copyFullBtn">Copy Full Song</button>
-      </div>
-      <div class="full-rewrite-body" id="fullRewriteBody"></div>
-    </div>
+  <div class="checklist-section">
+    <div class="section-title">Song checklist</div>
+    <div class="checklist-grid" id="checklistGrid"></div>
   </div>
 
-  <!-- Actions -->
-  <div>
-    <div class="section-heading">
-      <h2>NOTES TO 10/10</h2>
-      <span class="section-tag">Action</span>
-    </div>
-    <ol class="actions-list" id="actionList"></ol>
+  <div class="dims-section">
+    <div class="dims-title">Seven dimensions — path to 10/10</div>
+    <div id="dimsList"></div>
   </div>
 
-  <div class="bottom-actions">
+  <div class="bottom-row">
     <button class="btn-regrade" id="regradeBtn">↺ Regrade This Song</button>
-    <button class="btn-reset" id="resetBtn">← Grade Another Song</button>
+    <button class="btn-reset" id="resetBtn">← Grade Another</button>
   </div>
 
 </div>
 
-<!-- Global status/error -->
 <div class="status-bar" id="statusBar" aria-live="polite">
   <div class="spinner"></div>
-  <span id="statusText">Analysing…</span>
-  <span class="status-step" id="statusStep" style="display:none"></span>
+  <span id="statusText">Grading…</span>
   <span class="status-attempt" id="statusAttempt"></span>
 </div>
 <div class="error-box" id="errorBox" role="alert"></div>
 
-</main>
+</div><!-- /wrap -->
 
-<footer>
-  <div class="footer-sig">Lyrics Grader v4.0 · Seven-dimension rubric · Nothing stored</div>
-  <div class="footer-signal"><span class="signal-dot"></span> Frequency active</div>
-</footer>
-
-</div><!-- /layout -->
+<footer>Lyrics Grader · Seven-dimension rubric · Nothing stored server-side</footer>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-const GROQ_MODELS  = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
+// ── Constants ──────────────────────────────────────────────────────────────
+const GROQ_MODELS        = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile'];
 const GEMINI_MODEL       = 'gemini-2.0-flash';
 const GEMINI_MODEL_LABEL = 'Gemini 2.0 Flash';
-const CLAUDE_REWRITE_MODEL       = 'claude-sonnet-4-6';
-const CLAUDE_REWRITE_MODEL_LABEL = 'Claude Sonnet 4.6';
-const TIMEOUT_MS        = 52000;
-const TIMEOUT_MS_CLAUDE = 120000;
-const RETRY_DELAY  = 1400;
-const MAX_HISTORY  = 20;
+const CLAUDE_MODEL       = 'claude-sonnet-4-6';
+const CLAUDE_LABEL       = 'Claude Sonnet 4.6';
+const TIMEOUT_MS         = 60000;
+const RETRY_DELAY        = 1500;
+const MAX_HISTORY        = 20;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+// ── State ──────────────────────────────────────────────────────────────────
 let controller = null;
-let appState = {
-  gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical',
-  ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: [],
-  parsedSections: [], selectedSections: []
-};
+let state = { gradeResult: null, usedModel: null, ctx: '', lyrics: '', gradeHistory: [] };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Utilities ──────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
-}
-
-function sanitizeForPrompt(s, maxLen = 1000) {
-  s = String(s ?? '').replace(/[`\\]/g, ' ').trim();
-  if (s.length <= maxLen) return s;
-  const cut = s.lastIndexOf(' ', maxLen);
-  return s.slice(0, cut > 0 ? cut : maxLen) + '…';
-}
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 
 function extractJSON(raw) {
-  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fenceMatch) return fenceMatch[1].trim();
+  const m = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (m) return m[1].trim();
   const start = raw.search(/[{[]/);
-  if (start !== -1) return raw.slice(start).trim();
-  return raw.trim();
+  return start !== -1 ? raw.slice(start).trim() : raw.trim();
 }
 
 const DIM_WEIGHTS = [2, 1, 2, 1, 1, 1, 1];
-function computeOverall(dimensions) {
-  if (!dimensions || !dimensions.length) return null;
-  const totalWeight = DIM_WEIGHTS.reduce((a, b) => a + b, 0);
-  const weighted = dimensions.reduce((sum, dim, i) => sum + (dim.score * (DIM_WEIGHTS[i] ?? 1)), 0);
-  return +(weighted / totalWeight).toFixed(1);
+function computeOverall(dims) {
+  if (!dims?.length) return null;
+  const tw = DIM_WEIGHTS.reduce((a,b) => a+b, 0);
+  return +(dims.reduce((s,d,i) => s + d.score * (DIM_WEIGHTS[i] ?? 1), 0) / tw).toFixed(1);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Init
-// ─────────────────────────────────────────────────────────────────────────────
-const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+function scoreClass(n) { return n >= 8.5 ? 'hi' : n >= 6 ? 'mid' : 'lo'; }
 
+function barColor(n) {
+  if (n >= 8.5) return 'var(--green)';
+  if (n >= 6)   return 'var(--gold)';
+  return 'var(--red)';
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
 $('lyrics').addEventListener('input', () => {
   const n = $('lyrics').value.length;
-  $('charCount').textContent = `${n.toLocaleString()} ch`;
-  parseSectionsFromInput();
+  $('charCount').textContent = n.toLocaleString();
 });
-
 $('lyrics').addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-    e.preventDefault();
-    if (!$('surgicalBtn').disabled) startGrade('surgical');
-  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (!$('gradeBtn').disabled) doGrade(); }
 });
-
-$('surgicalBtn').addEventListener('click', () => startGrade('surgical'));
-$('fullBtn').addEventListener('click', () => startGrade('full'));
-$('cancelBtn').addEventListener('click', cancelRequest);
-$('rewriteScope').addEventListener('change', handleScopeChange);
-$('historyToggleBtn').addEventListener('click', toggleHistory);
-$('regradeBtn').addEventListener('click', regradeFromResults);
+$('gradeBtn').addEventListener('click', doGrade);
+$('cancelBtn').addEventListener('click', cancelReq);
+$('histBtn').addEventListener('click', () => $('historyPanel').classList.toggle('open'));
+$('regradeBtn').addEventListener('click', () => { $('lyrics').value = state.lyrics; $('context').value = state.ctx; $('charCount').textContent = state.lyrics.length.toLocaleString(); showPhase('phaseInput'); });
 $('resetBtn').addEventListener('click', resetAll);
-$('copyAllBtn').addEventListener('click', copyAllRewrites);
-$('copyFullBtn').addEventListener('click', copyFullSong);
-$('copyBufferBtn').addEventListener('click', copyBuffer);
-$('allSectionsChip').addEventListener('click', toggleSectionAll);
 
 (function initKeys() {
   try {
-    const gk = localStorage.getItem('lg_groq'), mk = localStorage.getItem('lg_gemini'), ak = localStorage.getItem('lg_anthropic');
-    if (gk) $('groqKey').value = gk;
-    if (mk) $('geminiKey').value = mk;
-    if (ak) $('anthropicKey').value = ak;
+    const g = localStorage.getItem('lg_groq'), m = localStorage.getItem('lg_gemini'), a = localStorage.getItem('lg_anthropic');
+    if (g) $('groqKey').value = g;
+    if (m) $('geminiKey').value = m;
+    if (a) $('anthropicKey').value = a;
   } catch(_) {}
 })();
 $('groqKey').addEventListener('input',      e => { try { localStorage.setItem('lg_groq',      e.target.value); } catch(_){} });
@@ -1494,294 +575,118 @@ $('geminiKey').addEventListener('input',    e => { try { localStorage.setItem('l
 $('anthropicKey').addEventListener('input', e => { try { localStorage.setItem('lg_anthropic', e.target.value); } catch(_){} });
 
 (function initHistory() {
-  try { const h = sessionStorage.getItem('lg_history'); if (h) appState.gradeHistory = JSON.parse(h); } catch(_) {}
+  try { const h = sessionStorage.getItem('lg_history'); if (h) state.gradeHistory = JSON.parse(h); } catch(_) {}
 })();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Section parsing
-// ─────────────────────────────────────────────────────────────────────────────
-function parseSections(text) {
-  const matches = [...text.matchAll(/^\[([^\]]+)\]/gm)];
-  const seen = new Set();
-  return matches.map(m => m[1].trim()).filter(s => { if (seen.has(s)) return false; seen.add(s); return true; });
-}
-
-function parseSectionsFromInput() {
-  const text = $('lyrics').value;
-  const sections = parseSections(text);
-  appState.parsedSections = sections;
-  renderSectionChips(sections);
-  const hint = $('sectionLabelHint');
-  if (sections.length) {
-    hint.textContent = `Labels: ${sections.map(s => `[${s}]`).join(', ')}`;
-    hint.classList.add('visible');
-  } else {
-    hint.classList.remove('visible');
-  }
-}
-
-function renderSectionChips(sections) {
-  const container = $('sectionChips');
-  if ($('rewriteScope').value !== 'sections') return;
-  container.innerHTML = '';
-  const allChip = document.createElement('span');
-  allChip.className = 'section-chip' + (!appState.selectedSections.length ? ' selected' : '');
-  allChip.dataset.section = 'all';
-  allChip.textContent = 'All';
-  allChip.addEventListener('click', toggleSectionAll);
-  container.appendChild(allChip);
-  if (!sections.length) {
-    const note = document.createElement('span');
-    note.style.cssText = 'font-family:var(--mono);font-size:.6rem;color:var(--text-4)';
-    note.textContent = 'No labels found';
-    container.appendChild(note);
-    return;
-  }
-  sections.forEach(s => {
-    const chip = document.createElement('span');
-    chip.className = 'section-chip' + (appState.selectedSections.includes(s) ? ' selected' : '');
-    chip.dataset.section = s;
-    chip.textContent = s;
-    chip.addEventListener('click', () => toggleSection(s));
-    container.appendChild(chip);
-  });
-}
-
-function toggleSectionAll() { appState.selectedSections = []; renderSectionChips(appState.parsedSections); }
-function toggleSection(name) {
-  const idx = appState.selectedSections.indexOf(name);
-  if (idx === -1) appState.selectedSections.push(name);
-  else appState.selectedSections.splice(idx, 1);
-  renderSectionChips(appState.parsedSections);
-}
-function handleScopeChange() {
-  const scope = $('rewriteScope').value;
-  if (scope === 'sections') { $('sectionPicker').classList.add('visible'); parseSectionsFromInput(); }
-  else $('sectionPicker').classList.remove('visible');
-}
-function extractSections(lyrics, sections) {
-  if (!sections || !sections.length) return lyrics;
-  const lines = lyrics.split('\n'), result = [];
-  let inTarget = false;
-  lines.forEach(line => {
-    const m = line.match(/^\[([^\]]+)\]/);
-    if (m) inTarget = sections.includes(m[1].trim());
-    if (inTarget) result.push(line);
-  });
-  return result.join('\n');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UI helpers
-// ─────────────────────────────────────────────────────────────────────────────
-function showPhase(name) {
-  ['phaseInput','phaseResults'].forEach(id => $(id).classList.remove('active'));
-  $(name).classList.add('active');
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function showPhase(id) {
+  ['phaseInput','phaseResults'].forEach(p => $(p).classList.remove('active'));
+  $(id).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-function setStatus(text, step, attempt) {
-  const bar = $('statusBar');
-  if (!text) { bar.classList.remove('active'); return; }
-  bar.classList.add('active');
-  $('statusText').textContent = text;
-  const stepEl = $('statusStep');
-  if (step) { stepEl.textContent = step; stepEl.style.display = ''; } else { stepEl.style.display = 'none'; }
+function setStatus(txt, attempt) {
+  const b = $('statusBar');
+  if (!txt) { b.classList.remove('active'); return; }
+  b.classList.add('active');
+  $('statusText').textContent = txt;
   $('statusAttempt').textContent = attempt || '';
 }
-function showError(msg, details) {
-  const box = $('errorBox');
-  box.innerHTML = `<strong>Error:</strong> ${esc(msg)}${details ? `<div class="error-detail">${esc(details)}</div>` : ''}`;
-  box.classList.add('active');
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function showError(msg, detail) {
+  const b = $('errorBox');
+  b.innerHTML = `<strong>Error:</strong> ${esc(msg)}${detail ? `<div class="error-detail">${esc(detail)}</div>` : ''}`;
+  b.classList.add('active');
+  b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function clearError() { $('errorBox').classList.remove('active'); }
 function setBusy(on) {
-  $('surgicalBtn').disabled = on;
-  $('fullBtn').disabled     = on;
+  $('gradeBtn').disabled = on;
   $('cancelBtn').classList.toggle('visible', on);
   if (!on) setStatus('');
 }
-function cancelRequest() {
+function cancelReq() {
   if (controller) { controller.abort('user_cancel'); controller = null; }
   setBusy(false); clearError();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// API layer
-// ─────────────────────────────────────────────────────────────────────────────
-function fetchWithTimeout(url, opts, signal, timeoutMs = TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(Object.assign(new Error('Request timed out.'), { name: 'TimeoutError' })), timeoutMs);
-    fetch(url, { ...opts, signal }).then(r => { clearTimeout(t); resolve(r); }).catch(e => { clearTimeout(t); reject(e); });
+// ── API layer ──────────────────────────────────────────────────────────────
+function fetchWithTimeout(url, opts, signal) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => rej(Object.assign(new Error('Request timed out.'), { name: 'TimeoutError' })), TIMEOUT_MS);
+    fetch(url, { ...opts, signal }).then(r => { clearTimeout(t); res(r); }).catch(e => { clearTimeout(t); rej(e); });
   });
 }
-async function fetchRetry(url, opts, signal, maxRetries, timeoutMs = TIMEOUT_MS) {
+async function fetchRetry(url, opts, signal, maxRetries) {
   let attempt = 0;
   while (true) {
-    const res = await fetchWithTimeout(url, opts, signal, timeoutMs);
+    const res = await fetchWithTimeout(url, opts, signal);
     if (res.status !== 429 || attempt >= maxRetries) return res;
     attempt++;
     const ra = parseInt(res.headers.get('retry-after') || '0', 10);
     const delay = ra > 0 ? ra * 1000 : RETRY_DELAY * attempt;
-    setStatus(`Rate limited — retrying in ${Math.round(delay/1000)}s…`, null, `attempt ${attempt}/${maxRetries}`);
+    setStatus(`Rate limited — retrying in ${Math.round(delay/1000)}s…`, `attempt ${attempt}/${maxRetries}`);
     await new Promise((r, j) => {
       const t = setTimeout(r, delay);
       signal.addEventListener('abort', () => { clearTimeout(t); j(new DOMException('Aborted','AbortError')); }, { once: true });
     });
   }
 }
-async function callGroq(key, prompt, modelIdx, signal, retries, temp) {
+async function callGroq(key, prompt, modelIdx, signal, retries) {
   const res = await fetchRetry(
     'https://api.groq.com/openai/v1/chat/completions',
     { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: GROQ_MODELS[modelIdx], temperature: temp, max_tokens: 3600, messages: [{ role: 'user', content: prompt }] }) },
+      body: JSON.stringify({ model: GROQ_MODELS[modelIdx], temperature: 0.65, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }) },
     signal, retries
   );
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Groq ${res.status}`), { status: res.status }); }
-  const data = await res.json();
-  return { text: data.choices[0].message.content, model: GROQ_MODELS[modelIdx] };
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw Object.assign(new Error(e?.error?.message || `Groq ${res.status}`), { status: res.status }); }
+  const d = await res.json();
+  return { text: d.choices[0].message.content, model: GROQ_MODELS[modelIdx] };
 }
-async function callGemini(key, prompt, signal, retries, temp) {
+async function callGemini(key, prompt, signal, retries) {
   const res = await fetchRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: temp, maxOutputTokens: 3600 } }) },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: 4000 } }) },
     signal, retries
   );
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Gemini ${res.status}`), { status: res.status }); }
-  const data = await res.json();
-  return { text: data.candidates[0].content.parts[0].text, model: GEMINI_MODEL_LABEL };
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw Object.assign(new Error(e?.error?.message || `Gemini ${res.status}`), { status: res.status }); }
+  const d = await res.json();
+  return { text: d.candidates[0].content.parts[0].text, model: GEMINI_MODEL_LABEL };
 }
-async function callAPI(keys, prompt, signal, retries, temp = 0.7) {
-  const errors = [];
-  if (keys.groq) {
-    for (let i = 0; i < GROQ_MODELS.length; i++) {
-      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      try { return await callGroq(keys.groq, prompt, i, signal, retries, temp); }
-      catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`); if (e.status === 401 || e.status === 403) break; }
-    }
-  }
-  if (keys.gemini && !signal.aborted) {
-    try { return await callGemini(keys.gemini, prompt, signal, retries, temp); }
-    catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Gemini: ${e.message}`); }
-  }
-  throw new Error(errors[errors.length - 1] || 'No API available', { cause: errors.join(' | ') });
-}
-async function callClaude(key, prompt, signal, retries, temp) {
+async function callClaude(key, prompt, signal, retries) {
   const res = await fetchRetry(
     'https://api.anthropic.com/v1/messages',
     { method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: CLAUDE_REWRITE_MODEL, max_tokens: 4000, temperature: temp, messages: [{ role: 'user', content: prompt }] }) },
-    signal, retries, TIMEOUT_MS_CLAUDE
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4000, temperature: 0.65, messages: [{ role: 'user', content: prompt }] }) },
+    signal, retries
   );
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw Object.assign(new Error(err?.error?.message || `Anthropic ${res.status}`), { status: res.status }); }
-  const data = await res.json();
-  return { text: data.content.filter(b => b.type === 'text').map(b => b.text).join(''), model: CLAUDE_REWRITE_MODEL_LABEL };
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw Object.assign(new Error(e?.error?.message || `Anthropic ${res.status}`), { status: res.status }); }
+  const d = await res.json();
+  return { text: d.content.filter(b => b.type === 'text').map(b => b.text).join(''), model: CLAUDE_LABEL };
 }
-async function callRewriteAPI(keys, prompt, signal, retries, temp = 0.78) {
+async function callAPI(keys, prompt, signal, retries) {
   const errors = [];
-  if (keys.anthropic) {
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-    try { return await callClaude(keys.anthropic, prompt, signal, retries, temp); }
-    catch(e) {
-      if (e.name === 'AbortError') throw e;
-      errors.push(`Claude: ${e.message}`);
-      if (e.status === 401 || e.status === 403) throw new Error(`Anthropic key error: ${e.message}`);
+  if (keys.groq) {
+    for (let i = 0; i < GROQ_MODELS.length; i++) {
+      if (signal.aborted) throw new DOMException('Aborted','AbortError');
+      try { return await callGroq(keys.groq, prompt, i, signal, retries); }
+      catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`); if (e.status === 401 || e.status === 403) break; }
     }
   }
-  try { return await callAPI(keys, prompt, signal, retries, temp); }
-  catch(e) { if (e.name === 'AbortError') throw e; errors.push(e.message); }
-  throw new Error(errors[errors.length - 1] || 'No rewrite API available', { cause: errors.join(' | ') });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Parsers
-// ─────────────────────────────────────────────────────────────────────────────
-function parseGrade(text) {
-  const d = JSON.parse(extractJSON(text));
-  if (!Array.isArray(d.dimensions) || !d.dimensions.length) throw new Error('Missing dimensions');
-  if (typeof d.verdict !== 'string') throw new Error('Missing verdict');
-  if (!Array.isArray(d.weak_lines)) throw new Error('Missing weak_lines');
-  if (!Array.isArray(d.actions)) throw new Error('Missing actions');
-  if (!d.primary_flags) d.primary_flags = {};
-  if (!d.checklist) d.checklist = {};
-  d.overall = computeOverall(d.dimensions);
-  return d;
-}
-
-function parseRewrites(text) {
-  const d = JSON.parse(extractJSON(text));
-  if (!Array.isArray(d.rewrites)) throw new Error('Missing rewrites array');
-
-  function countSyllables(str) {
-    if (!str || typeof str !== 'string') return null;
-    return str.trim().split(/\s+/).reduce((total, rawWord) => {
-      const w = rawWord.toLowerCase().replace(/[^a-z']/g, '').replace(/'/g, '');
-      if (!w) return total;
-      let n = (w.match(/[aeiouy]+/g) || []).length;
-      if (w.length > 2 && w.endsWith('e') && !w.endsWith('le') && !w.endsWith('ee') && !w.endsWith('oe') && n > 1) n--;
-      if (/[ts]ion$/.test(w)) n = Math.max(n, 2);
-      if (/(ious|eous|ual|iel)$/.test(w)) n++;
-      return total + Math.max(1, n);
-    }, 0);
+  if (keys.gemini && !signal.aborted) {
+    try { return await callGemini(keys.gemini, prompt, signal, retries); }
+    catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Gemini: ${e.message}`); }
   }
-
-  return d.rewrites
-    .filter(r => r && typeof r.before === 'string' && typeof r.after === 'string')
-    .map(r => {
-      const orig  = countSyllables(r.before);
-      const rew   = countSyllables(r.after);
-      const delta = (orig !== null && rew !== null) ? rew - orig : null;
-      const adjRaw   = typeof r.adjacency_violations === 'string' ? r.adjacency_violations.trim() : '';
-      const adjClear = adjRaw.toUpperCase() === 'CLEAR' || adjRaw === '';
-      const vtRaw    = typeof r.verbatim_check === 'string' ? r.verbatim_check.trim() : '';
-      const vtClear  = vtRaw.toUpperCase() === 'CLEAR' || vtRaw === '';
-      const synRaw   = typeof r.synonym_check === 'string' ? r.synonym_check.trim()
-                     : typeof r.domain_shift  === 'string' ? '' : '';
-      const synClear = synRaw.toUpperCase() === 'CLEAR' || synRaw === '' ||
-                       (typeof r.domain_shift === 'string' && r.domain_shift.trim() !== '');
-      const sylPass = delta === null || Math.abs(delta) <= 1;
-      const adjCheckRaw = typeof r.adjacency_check === 'string' ? r.adjacency_check : '';
-      let clientAdjViolation = '';
-      if (adjClear && adjCheckRaw) {
-        const stepBMatch = adjCheckRaw.match(/STEP\s*B[:\s]+(.+?)(?:STEP\s*C|$)/is);
-        if (stepBMatch) {
-          const stepBWords = stepBMatch[1].toLowerCase().split(/[\s,;|/\-—–]+/).map(w => w.replace(/[^a-z]/g, '')).filter(w => w.length > 2);
-          const afterWords = r.after.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z]/g, ''));
-          for (const banned of stepBWords) {
-            if (afterWords.includes(banned)) { clientAdjViolation = `"${banned}" found in rewrite but listed as neighbour word`; break; }
-          }
-        }
-      }
-      const finalAdjClear = adjClear && !clientAdjViolation;
-      return {
-        before: r.before, after: r.after,
-        world_anchor: r.world_anchor || '', why: r.why || '',
-        structural_role: r.structural_role || '',
-        adjacency_clear: finalAdjClear,
-        adjacency_violation: finalAdjClear ? '' : (clientAdjViolation || adjRaw),
-        syllable_pass: sylPass,
-        syllable_violation: sylPass ? '' : `client count: original ${orig}, rewrite ${rew}`,
-        verbatim_clear: vtClear, verbatim_violation: vtClear ? '' : vtRaw,
-        synonym_clear: synClear, synonym_violation: synClear ? '' : synRaw,
-        auto_repaired: r.auto_repaired || false,
-        syllable_delta: delta
-      };
-    });
+  if (keys.anthropic && !signal.aborted) {
+    try { return await callClaude(keys.anthropic, prompt, signal, retries); }
+    catch(e) { if (e.name === 'AbortError') throw e; errors.push(`Claude: ${e.message}`); }
+  }
+  throw new Error(errors[errors.length - 1] || 'No API available');
 }
 
-function parseFullRewrite(text) {
-  const d = JSON.parse(extractJSON(text));
-  if (typeof d.rewritten_song !== 'string') throw new Error('Missing rewritten_song');
-  return d.rewritten_song;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Prompts (unchanged from v3.8)
-// ─────────────────────────────────────────────────────────────────────────────
-function buildGradePrompt(ctx, lyrics) {
-  return `You are a professional songwriter, A&R consultant, and lyric critic with 30+ years across rock, alternative, metal, and electronic genres. You evaluate lyrics with surgical honesty. You never soften feedback. You cite specific lines.
+// ── Prompt ─────────────────────────────────────────────────────────────────
+function buildPrompt(ctx, lyrics) {
+  return `You are a professional songwriter, A&R consultant, and lyric critic with 30+ years across rock, alternative, metal, folk, and electronic genres. You evaluate lyrics with surgical honesty. You never soften feedback. You always cite specific lines.
 
 GRADING RUBRIC — seven dimensions, each scored 1–10:
 
@@ -1804,38 +709,34 @@ GRADING RUBRIC — seven dimensions, each scored 1–10:
    Test: What is this song about in one sentence? Does every section support that?
 
 4. COMPRESSION & SUBTEXT
-   Maximum meaning per word. What the line hides matters as much as what it says. Great lyrics reward multiple listens.
+   Maximum meaning per word. What the line hides matters as much as what it says.
    Low: Over-explained, filler phrases, states what it should show.
    High: Subtext expands on reread. Nothing wasted. Layers of meaning.
-   Test: Can any word be cut without losing meaning? Does the line say more than it appears to?
+   Test: Can any word be cut without losing meaning?
 
 5. PROSODY & FLOW
-   Words and melody work together naturally. Stressed syllables land on emotional beats. The line fits the mouth without forcing.
+   Words and melody work together naturally. Stressed syllables land on emotional beats.
    Low: Clunky phrasing, syllables that fight the meter, lines that feel written to rhyme.
-   High: Cadence feels inevitable. Consonants, vowels, and line length are intentional. Natural to sing.
-   Test: Read it aloud. Does it resist or flow? Do rhymes feel earned or forced?
+   High: Cadence feels inevitable. Natural to sing.
+   Test: Read it aloud. Does it resist or flow?
 
 6. ORIGINALITY & AUTHENTICITY
-   Fresh angles on familiar human experiences. Feels inevitable — like it had to be written. Not performative.
-   Low: Recycled phrasing, clichés, lines that feel borrowed or generic.
+   Fresh angles on familiar human experiences.
+   Low: Recycled phrasing, clichés, lines that feel borrowed.
    High: Surprising but natural phrasing. A point of view only this writer could have. Feels true, not constructed.
-   Test: Would you steal a line from this? Does it feel lived-in or assembled?
+   Test: Would you steal a line from this?
 
 7. MEMORABILITY
-   Lines that stick. Phrasing so precise it becomes quotable. The "tattoo-able" test.
+   Lines that stick. Phrasing so precise it becomes quotable.
    Low: Forgettable. Nothing to hold onto after one listen.
    High: Multiple lines that stop you. Phrasing you can still hear after you stop reading.
-   Test: What line from this song will you remember in a week?
+   Test: What line will you remember in a week?
 
-SCORE THRESHOLDS:
-7/10 — Solid, competent. Some good lines, some filler. Wouldn't skip, wouldn't study.
-9/10 — Professionally elite. Strong concept, vivid specifics, emotional precision. Maybe 1–2 weaker lines.
-10/10 — Rare. Every line feels necessary, specific, original, unified.
-
-PRIMARY FAILURE MODES (flag the single worst instance of each):
-- SHOW VS TELL: The most abstract emotional statement.
-- INTERCHANGEABLE: The most replaceable line — no fingerprint.
-- FILLER: The weakest line for compression.
+For EACH dimension, after scoring and noting what's there, provide 2–4 specific, actionable steps the writer must take to push THAT dimension to 10/10. These steps must:
+- Quote the actual weak line(s) by name
+- Name the exact problem (too abstract, clichéd word, meter breaks here, etc.)
+- Give a specific direction (not a rewrite — a direction: "replace the abstraction with the physical event that causes the feeling", "cut the last four words", "the rhyme on 'new/into' is forced — find a rhyme that earns itself")
+- Be honest. If a line is a cliché, name the cliché. If the rhyme is forced, say so.
 
 Song context: "${ctx || 'None provided'}"
 
@@ -1844,23 +745,58 @@ LYRICS:
 ${lyrics}
 ---
 
-Respond ONLY with valid JSON, no markdown:
+Respond ONLY with valid JSON, no markdown fences:
 
 {
-  "overall": <1–10 one decimal>,
+  "overall": <1–10 one decimal — your holistic weighted assessment>,
   "dimensions": [
-    { "label": "Emotional Specificity",      "score": <1–10>, "note": "<1–2 sentences>" },
-    { "label": "Imagery & Visual Language",  "score": <1–10>, "note": "<1–2 sentences>" },
-    { "label": "Concept & Cohesion",         "score": <1–10>, "note": "<1–2 sentences>" },
-    { "label": "Compression & Subtext",      "score": <1–10>, "note": "<1–2 sentences>" },
-    { "label": "Prosody & Flow",             "score": <1–10>, "note": "<1–2 sentences>" },
-    { "label": "Originality & Authenticity", "score": <1–10>, "note": "<1–2 sentences>" },
-    { "label": "Memorability",               "score": <1–10>, "note": "<1–2 sentences>" }
+    {
+      "label": "Emotional Specificity",
+      "score": <1–10>,
+      "note": "<1–2 sentences citing strongest and weakest lines>",
+      "path_to_10": ["<specific step 1>", "<specific step 2>", "<specific step 3>"]
+    },
+    {
+      "label": "Imagery & Visual Language",
+      "score": <1–10>,
+      "note": "<1–2 sentences>",
+      "path_to_10": ["<step>", "<step>", "<step>"]
+    },
+    {
+      "label": "Concept & Cohesion",
+      "score": <1–10>,
+      "note": "<1–2 sentences>",
+      "path_to_10": ["<step>", "<step>", "<step>"]
+    },
+    {
+      "label": "Compression & Subtext",
+      "score": <1–10>,
+      "note": "<1–2 sentences>",
+      "path_to_10": ["<step>", "<step>", "<step>"]
+    },
+    {
+      "label": "Prosody & Flow",
+      "score": <1–10>,
+      "note": "<1–2 sentences>",
+      "path_to_10": ["<step>", "<step>", "<step>"]
+    },
+    {
+      "label": "Originality & Authenticity",
+      "score": <1–10>,
+      "note": "<1–2 sentences>",
+      "path_to_10": ["<step>", "<step>", "<step>"]
+    },
+    {
+      "label": "Memorability",
+      "score": <1–10>,
+      "note": "<1–2 sentences>",
+      "path_to_10": ["<step>", "<step>", "<step>"]
+    }
   ],
   "primary_flags": {
     "show_vs_tell": "<most abstract telling line verbatim, or 'none'>",
     "interchangeable": "<most interchangeable line verbatim, or 'none'>",
-    "filler": "<weakest line for compression verbatim, or 'none'>"
+    "filler": "<weakest compression line verbatim, or 'none'>"
   },
   "checklist": {
     "central_idea": "<one sentence: what this song is about>",
@@ -1869,614 +805,244 @@ Respond ONLY with valid JSON, no markdown:
     "prosody_issues": "<specific line that fights its meter, or 'none'>",
     "most_memorable_line": "<the single line you'd remember after one listen>"
   },
-  "verdict": "<honest 2–3 sentence summary>",
-  "weak_lines": ["<weakest>","<2nd>","<3rd>","<4th>","<5th>","<6th>","<7th>"],
-  "actions": ["<fix 1>","<fix 2>","<fix 3>","<fix 4>","<fix 5>"]
+  "verdict": "<honest 2–3 sentence summary — lead with the single biggest thing holding it back, end with what it would take to reach the next tier>"
 }`;
 }
 
-function buildSurgicalPrompt(ctx, lyrics, weakLines) {
-  const linesList = weakLines.map((l, i) => `${i+1}. "${l}"`).join('\n');
-  return `You are a master songwriter and lyric editor. Rewrite weak lines to elite level.
-
-Before writing any rewrite, read the full song and build an imagery catalogue — every concrete noun and physical action verb, with its section. This is your only allowed word pool for content words.
-
-For each weak line, produce a rewrite that:
-1. Stays within ±1 syllable of the original
-2. Uses only words from the imagery catalogue
-3. Shares no word, root word, or image with the line immediately before or after it in the song
-4. Does not appear verbatim anywhere else in the song
-5. Moves to a different image domain than the original
-6. Performs the same structural role (TENSION BUILDER / IMAGE ANCHOR / RHYTHMIC RELEASE / NARRATIVE PIVOT / BREATH MOMENT / EMOTIONAL PAYOFF)
-7. Contains no abstract emotional statements — only the physical event that produces the feeling
-8. Is the only line that could exist here
-
-Context: "${ctx || 'None provided'}"
-
-FULL SONG:
----
-${lyrics}
----
-
-Weak lines to rewrite:
-${linesList}
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "imagery_catalogue": ["<word (section)>"],
-  "rewrites": [
-    {
-      "before": "<original line verbatim>",
-      "structural_role": "<ROLE TYPE> — <one sentence why>",
-      "syllable_check": "<original count> → <rewrite count> — PASS or FAIL",
-      "adjacency_check": "<line before> | <line after> — CLEAR or VIOLATION:[word]",
-      "adjacency_violations": "CLEAR",
-      "verbatim_check": "CLEAR",
-      "domain_shift": "<original domain> → <new domain>",
-      "catalogue_check": "<each content word: in catalogue yes/no>",
-      "after": "<rewrite>",
-      "why": "<'[word] replaces [original] because [specific perceptual change]'>"
-    }
-  ]
-}`;
+// ── Parse ──────────────────────────────────────────────────────────────────
+function parseGrade(text) {
+  const d = JSON.parse(extractJSON(text));
+  if (!Array.isArray(d.dimensions) || !d.dimensions.length) throw new Error('Missing dimensions');
+  if (!d.verdict) throw new Error('Missing verdict');
+  if (!d.primary_flags) d.primary_flags = {};
+  if (!d.checklist) d.checklist = {};
+  // Always recompute overall from dimensions in JS — don't trust model arithmetic
+  d.overall = computeOverall(d.dimensions);
+  return d;
 }
 
-function buildSingleRegenPrompt(ctx, lyrics, line) {
-  return `You are a master songwriter. Rewrite one weak line to elite level.
-
-Read the full song. Build an imagery catalogue. That is your only allowed word pool.
-
-The rewrite must:
-1. Stay within ±1 syllable of the original
-2. Use only catalogue words
-3. Share no word, root, or image with the immediately adjacent lines
-4. Not appear verbatim elsewhere in the song
-5. Move to a different image domain than the original
-6. Perform the same structural role
-7. Replace abstraction with physical event
-8. Be the only line that could exist here
-
-Context: "${ctx || 'None provided'}"
-
-FULL SONG:
----
-${lyrics}
----
-
-Line to rewrite: "${line}"
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "imagery_catalogue": ["<word (section)>"],
-  "rewrites": [
-    {
-      "before": "<original line verbatim>",
-      "structural_role": "<ROLE TYPE> — <why>",
-      "syllable_check": "<original N> → <rewrite N> — PASS or FAIL",
-      "adjacency_check": "<line before> | <line after> — CLEAR or VIOLATION:[word]",
-      "adjacency_violations": "CLEAR",
-      "verbatim_check": "CLEAR",
-      "domain_shift": "<original domain> → <new domain>",
-      "catalogue_check": "<content word: yes/no each>",
-      "after": "<rewrite>",
-      "why": "<'[word] replaces [original] because [specific perceptual change]'>"
-    }
-  ]
-}`;
-}
-
-function buildFullRewritePrompt(ctx, lyrics, grade, targetSections) {
-  const flagsText = grade.primary_flags
-    ? `Primary weaknesses:\n- Show vs Tell: ${sanitizeForPrompt(grade.primary_flags.show_vs_tell)}\n- Interchangeable: ${sanitizeForPrompt(grade.primary_flags.interchangeable)}\n- Filler: ${sanitizeForPrompt(grade.primary_flags.filler)}`
-    : '';
-  const checklistText = grade.checklist
-    ? `Central idea: ${sanitizeForPrompt(grade.checklist.central_idea)}\nCohesion: ${sanitizeForPrompt(grade.checklist.cohesion)}\nImagery: ${sanitizeForPrompt(grade.checklist.imagery_quality)}\nProsody issue: ${sanitizeForPrompt(grade.checklist.prosody_issues)}`
-    : '';
-  const scopeNote = targetSections && targetSections.length
-    ? `SCOPE: Only rewrite these sections: ${targetSections.map(s => `[${s}]`).join(', ')}. Leave all other sections EXACTLY as they are.`
-    : 'SCOPE: Rewrite the full song.';
-
-  return `You are a professional master songwriter and lyric editor. Rewrite this song to 10/10.
-
-${scopeNote}
-
-NON-NEGOTIABLE RULES:
-1. NEVER explain the image.
-2. NEVER make a line longer than the original.
-3. KEEP what is already strong.
-4. NO ABSTRACT EMOTIONAL STATEMENTS.
-5. STAY INSIDE THE SONG'S WORLD.
-6. PRESERVE STRUCTURE EXACTLY.
-7. EVOLVE REPEATED SECTIONS — change 1–2 lines only.
-8. SERVE THE CENTRAL IDEA.
-9. NO ADJACENCY DUPLICATION.
-10. THE IRREPLACEABILITY TEST.
-
-Context: "${ctx || 'None provided'}"
-
-Grade: ${sanitizeForPrompt(String(grade.overall))}/10
-${checklistText}
-${flagsText}
-
-FULL SONG:
----
-${lyrics}
----
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "rewritten_song": "<complete rewritten song as a single string with \\n for line breaks>"
-}`;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main flow
-// ─────────────────────────────────────────────────────────────────────────────
-async function startGrade(mode) {
+// ── Main flow ──────────────────────────────────────────────────────────────
+async function doGrade() {
   const lyricsRaw = $('lyrics').value.trim();
   const ctxRaw    = $('context').value.trim();
-  if (!lyricsRaw)            return showError('Please paste your lyrics first.');
+  if (!lyricsRaw)            return showError('Paste your lyrics first.');
   if (lyricsRaw.length < 20) return showError('Lyrics look too short — paste the full text.');
   const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
   if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('Add at least one API key above.');
 
-  const retries   = parseInt($('retryCount').value, 10) || 0;
-  const lineCount = $('lineCount').value;
-  const scope     = $('rewriteScope').value;
-  const targetSections = scope === 'sections' && appState.selectedSections.length ? [...appState.selectedSections] : null;
-
+  const retries = parseInt($('retryCount').value, 10) || 0;
   clearError();
   controller = new AbortController();
   const { signal } = controller;
   setBusy(true);
 
-  const clean  = s => String(s ?? '').replace(/\r/g, '').trim();
+  const clean = s => String(s ?? '').replace(/\r/g, '').trim();
   const lyrics = clean(lyricsRaw);
   const ctx    = clean(ctxRaw);
 
-  setStatus('Grading your lyrics…', 'Pass 1 of 2');
+  setStatus('Grading your lyrics…');
   let gradeResult, usedModel;
   try {
-    const r = await callAPI(keys, buildGradePrompt(ctx, lyrics), signal, retries, 0.65);
+    const r  = await callAPI(keys, buildPrompt(ctx, lyrics), signal, retries);
     gradeResult = parseGrade(r.text);
     usedModel   = r.model;
   } catch(e) {
     controller = null; setBusy(false);
     if (e.name === 'AbortError') return;
-    showError(e.message, e.cause || ''); return;
-  }
-
-  let rewrites = [], fullSong = '', pass2Failed = false, pass2Error = '', rewriteModel = null;
-
-  if (mode === 'surgical') {
-    const maxLines  = lineCount === 'all' ? gradeResult.weak_lines.length : parseInt(lineCount, 10);
-    const weakLines = gradeResult.weak_lines.filter(Boolean).slice(0, maxLines);
-    const lineLabel = weakLines.length === 1 ? '1 line' : `${weakLines.length} lines`;
-    setStatus(`Rewriting the ${lineLabel}${keys.anthropic ? ' via Claude…' : '…'}`, 'Pass 2 of 2');
-    try {
-      const r = await callRewriteAPI(keys, buildSurgicalPrompt(ctx, lyrics, weakLines), signal, retries, 0.75);
-      rewrites = parseRewrites(r.text);
-      rewriteModel = r.model;
-    } catch(e) {
-      if (e.name === 'AbortError') { controller = null; setBusy(false); return; }
-      pass2Failed = true; pass2Error = e.message;
-    }
-  } else {
-    const scopeDesc = targetSections ? `sections: ${targetSections.join(', ')}` : 'full song';
-    setStatus(`Rewriting ${scopeDesc}${keys.anthropic ? ' via Claude…' : '…'}`, 'Pass 2 of 2');
-    try {
-      const r = await callRewriteAPI(keys, buildFullRewritePrompt(ctx, lyrics, gradeResult, targetSections), signal, retries, 0.78);
-      fullSong = parseFullRewrite(r.text);
-      rewriteModel = r.model;
-    } catch(e) {
-      if (e.name === 'AbortError') { controller = null; setBusy(false); return; }
-      pass2Failed = true; pass2Error = e.message;
-    }
+    showError(e.message, e.cause || '');
+    return;
   }
 
   controller = null;
   setBusy(false);
 
-  const prevHistory = [...appState.gradeHistory];
-  prevHistory.push({ score: gradeResult.overall, dimensions: gradeResult.dimensions, model: usedModel, ctx, timestamp: Date.now() });
-  if (prevHistory.length > MAX_HISTORY) prevHistory.shift();
+  const history = [...state.gradeHistory];
+  history.push({ score: gradeResult.overall, dimensions: gradeResult.dimensions, model: usedModel, ctx, timestamp: Date.now() });
+  if (history.length > MAX_HISTORY) history.shift();
+  state = { gradeResult, usedModel, ctx, lyrics, gradeHistory: history };
+  try { sessionStorage.setItem('lg_history', JSON.stringify(history)); } catch(_) {}
 
-  appState = { ...appState, gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, ctx, lyrics, acceptedRewrites: {}, gradeHistory: prevHistory, pass2Failed, pass2Error, targetSections };
-  try { sessionStorage.setItem('lg_history', JSON.stringify(prevHistory)); } catch(_) {}
-
-  if (pass2Failed) {
-    const pn = $('partialNotice');
-    pn.textContent = `Grade complete — rewrite step failed: ${pass2Error}. Try again to get rewrites.`;
-    pn.classList.add('active');
-  }
-
-  renderResults(gradeResult, usedModel, rewriteModel, rewrites, fullSong, mode, prevHistory, targetSections);
+  renderResults(gradeResult, usedModel, history);
   showPhase('phaseResults');
-
-  if (mode === 'surgical' && rewrites.length) autoRepairRewrites();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Regen + auto-repair
-// ─────────────────────────────────────────────────────────────────────────────
-async function regenLine(idx) {
-  const { gradeResult, lyrics, ctx } = appState;
-  const line = appState.rewrites[idx]?.before || gradeResult.weak_lines[idx];
-  if (!line) return;
-  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
-  if (!keys.groq && !keys.gemini && !keys.anthropic) return showError('API key required.');
-  const retries = parseInt($('retryCount').value, 10) || 0;
-  clearError();
-  controller = new AbortController();
-  const { signal } = controller;
-  const thisPair = document.querySelector(`[data-rewrite-idx="${idx}"]`);
-  if (thisPair) thisPair.querySelectorAll('button').forEach(b => b.disabled = true);
-  setStatus(`Regenerating line ${idx + 1}…`);
-  try {
-    const r = await callRewriteAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.82);
-    let result;
-    try { result = parseRewrites(r.text); }
-    catch(_) {
-      const r2 = await callRewriteAPI(keys, buildSingleRegenPrompt(ctx, lyrics, line), signal, retries, 0.6);
-      try { result = parseRewrites(r2.text); }
-      catch(e2) { throw new Error('Regeneration returned unexpected format — try once more.'); }
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderResults(grade, modelName, history) {
+  // Header
+  $('resultsTitle').textContent = state.ctx ? `"${state.ctx.slice(0, 60)}${state.ctx.length > 60 ? '…' : ''}"` : 'Grade';
+  const on = $('overallNum');
+  on.textContent = grade.overall;
+  on.className = 'overall-num ' + scoreClass(grade.overall);
+  $('modelTag').textContent = `graded via ${modelName}`;
+
+  // Delta
+  const ode = $('overallDelta');
+  if (history.length >= 2) {
+    const prev = history[history.length - 2];
+    const d = +(grade.overall - prev.score).toFixed(1);
+    ode.textContent = d > 0 ? `▲ +${d} from last` : d < 0 ? `▼ ${d} from last` : '— no change';
+    ode.className = `overall-delta ${d > 0 ? 'up' : d < 0 ? 'down' : 'same'}`;
+  } else { ode.textContent = ''; }
+
+  renderDeltaBanner(history);
+  renderHistory(history);
+
+  // Verdict
+  $('verdictText').textContent = grade.verdict;
+
+  // Flags
+  const fg = $('flagsGrid'); fg.innerHTML = '';
+  const f = grade.primary_flags || {};
+  [
+    { label: 'Show vs Tell', val: f.show_vs_tell },
+    { label: 'Interchangeable', val: f.interchangeable },
+    { label: 'Filler', val: f.filler }
+  ].forEach(flag => {
+    if (!flag.val || flag.val === 'none') return;
+    const el = document.createElement('div'); el.className = 'flag-item';
+    el.innerHTML = `<span class="flag-type">${esc(flag.label)}</span><span class="flag-quote">"${esc(flag.val)}"</span>`;
+    fg.appendChild(el);
+  });
+  $('flagsSection').style.display = fg.children.length ? '' : 'none';
+
+  // Checklist
+  const cl = grade.checklist || {}, cg = $('checklistGrid'); cg.innerHTML = '';
+  const cohCls = { yes: 'yes', partial: 'partial', no: 'no' }[cl.cohesion?.toLowerCase()] || 'partial';
+  const imgCls = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
+  [
+    { label: 'Central Idea', html: `<div class="cl-val">${esc(cl.central_idea || '—')}</div>` },
+    { label: 'Cohesion', html: `<div><span class="cl-badge ${cohCls}">${esc(cl.cohesion || '—')}</span></div>` },
+    { label: 'Imagery', html: `<div><span class="cl-badge ${imgCls}">${esc(cl.imagery_quality || '—')}</span></div>` },
+    { label: 'Prosody Issue', html: `<div class="cl-val">${cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${esc(cl.prosody_issues)}"` : 'None identified'}</div>` },
+    { label: 'Most Memorable', html: `<div class="cl-val italic">${esc(cl.most_memorable_line || '—')}</div>` },
+  ].forEach(item => {
+    const el = document.createElement('div'); el.className = 'cl-card';
+    el.innerHTML = `<div class="cl-label">${esc(item.label)}</div>${item.html}`;
+    cg.appendChild(el);
+  });
+
+  // Dimension cards
+  const dl = $('dimsList'); dl.innerHTML = '';
+  const prevGrade = history.length >= 2 ? history[history.length - 2] : null;
+
+  grade.dimensions.forEach((dim, i) => {
+    const pct = Math.min(100, Math.max(0, (dim.score / 10) * 100)).toFixed(1);
+    const isMaxed = dim.score === 10;
+    let deltaHtml = '';
+    if (prevGrade?.dimensions?.[i]) {
+      const d = +(dim.score - prevGrade.dimensions[i].score).toFixed(1);
+      if (d !== 0) deltaHtml = `<span class="dim-delta-badge ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
     }
-    if (result[0]) { appState.rewrites[idx] = result[0]; delete appState.acceptedRewrites[idx]; renderRewritePair(idx, result[0]); updateAcceptedBuffer(); }
-  } catch(e) { if (e.name !== 'AbortError') showError(e.message); }
-  finally {
-    controller = null; setStatus('');
-    const up = document.querySelector(`[data-rewrite-idx="${idx}"]`);
-    if (up) up.querySelectorAll('button').forEach(b => b.disabled = false);
-  }
-}
 
-async function autoRepairRewrites() {
-  const toRepair = appState.rewrites.map((r, idx) => ({ idx, r })).filter(({ r }) => !r.after || !r.after.trim() || r.syllable_pass === false);
-  if (!toRepair.length) return;
-  const keys = { groq: $('groqKey').value.trim(), gemini: $('geminiKey').value.trim(), anthropic: $('anthropicKey').value.trim() };
-  if (!keys.groq && !keys.gemini && !keys.anthropic) return;
-  const retries = parseInt($('retryCount').value, 10) || 0;
-  let repaired = 0, stillBroken = 0;
-  for (let i = 0; i < toRepair.length; i++) {
-    const { idx, r } = toRepair[i];
-    if (!r.before) continue;
-    setStatus(`Auto-repairing ${i + 1}/${toRepair.length} broken rewrites…`, 'repair');
-    controller = new AbortController();
-    const { signal } = controller;
-    try {
-      const resp = await callRewriteAPI(keys, buildSingleRegenPrompt(appState.ctx, appState.lyrics, r.before), signal, retries, 0.82);
-      const result = parseRewrites(resp.text);
-      if (result[0] && result[0].after && result[0].after.trim()) {
-        result[0].auto_repaired = true;
-        appState.rewrites[idx] = result[0];
-        delete appState.acceptedRewrites[idx];
-        renderRewritePair(idx, result[0]);
-        updateAcceptedBuffer();
-        if (result[0].syllable_pass) repaired++; else stillBroken++;
-      } else stillBroken++;
-    } catch(e) { if (e.name === 'AbortError') { controller = null; setStatus(''); return; } stillBroken++; }
-    finally { controller = null; }
-  }
-  setStatus('');
-  const repairEl = $('repairNotice');
-  if (repairEl) {
-    if (stillBroken > 0) {
-      repairEl.textContent = `Auto-repair: ${repaired > 0 ? `${repaired} fixed` : 'none fixed'}, ${stillBroken} still broken — try Regenerate.`;
-      repairEl.classList.add('active');
-    } else if (repaired > 0) {
-      repairEl.textContent = `Auto-repair: ${repaired} rewrite${repaired !== 1 ? 's' : ''} fixed.`;
-      repairEl.classList.add('active');
-      setTimeout(() => repairEl.classList.remove('active'), 6000);
+    const pathItems = Array.isArray(dim.path_to_10) ? dim.path_to_10 : [];
+    let pathHtml;
+    if (isMaxed) {
+      pathHtml = `<div class="dim-path-block"><span class="perfect-badge">✓ Nothing to fix at this level — preserve what's here</span></div>`;
+    } else {
+      pathHtml = `
+        <div class="dim-path-block">
+          <div class="dim-path-label"><span class="path-icon">→</span> Path to 10/10</div>
+          <ul class="dim-path-list">
+            ${pathItems.map(step => `<li>${esc(step)}</li>`).join('')}
+          </ul>
+        </div>`;
     }
+
+    const card = document.createElement('div');
+    card.className = 'dim-card';
+    card.style.animationDelay = `${i * 70}ms`;
+    card.innerHTML = `
+      <div class="dim-card-head">
+        <div class="dim-score-block">
+          <div class="dim-score ${scoreClass(dim.score)}">${esc(String(dim.score))}</div>
+          <div class="dim-score-sub">/10</div>
+        </div>
+        <div class="dim-title-block">
+          <div class="dim-label">${esc(dim.label)}</div>
+          <div class="dim-bar-wrap">
+            <div class="dim-bar-fill" data-pct="${pct}" style="background:${barColor(dim.score)}"></div>
+          </div>
+        </div>
+        ${deltaHtml}
+      </div>
+      <div class="dim-card-body">
+        <div class="dim-note-block">
+          <div class="dim-note-label">Assessment</div>
+          <div class="dim-note-text">${esc(dim.note)}</div>
+        </div>
+        ${pathHtml}
+      </div>`;
+    dl.appendChild(card);
+  });
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll('.dim-bar-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
+  }, 30);
+}
+
+// ── Delta banner ───────────────────────────────────────────────────────────
+function renderDeltaBanner(history) {
+  const banner = $('deltaBanner');
+  if (history.length < 2) { banner.classList.remove('active'); return; }
+  const curr = history[history.length - 1], prev = history[history.length - 2];
+  banner.innerHTML = '';
+  const lbl = document.createElement('span'); lbl.className = 'delta-bar-label'; lbl.textContent = 'vs last grade';
+  banner.appendChild(lbl);
+  const od = +(curr.score - prev.score).toFixed(1);
+  const oc = document.createElement('div'); oc.className = 'delta-chip';
+  oc.innerHTML = `<span class="dlbl">Overall</span><span class="dval ${od > 0 ? 'up' : od < 0 ? 'down' : ''}">${prev.score} → ${curr.score} (${od > 0 ? '+' : ''}${od})</span>`;
+  banner.appendChild(oc);
+  if (prev.dimensions && curr.dimensions) {
+    curr.dimensions.forEach((dim, i) => {
+      const pd = prev.dimensions[i]; if (!pd) return;
+      const d = +(dim.score - pd.score).toFixed(1); if (d === 0) return;
+      const chip = document.createElement('div'); chip.className = 'delta-chip';
+      chip.innerHTML = `<span class="dlbl">${esc(dim.label.split(' ')[0])}</span><span class="dval ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
+      banner.appendChild(chip);
+    });
   }
+  banner.classList.add('active');
 }
 
-function acceptRewrite(idx) {
-  const r = appState.rewrites[idx]; if (!r) return;
-  appState.acceptedRewrites[idx] = r.after;
-  updateRewritePairUI(idx, true); updateAcceptedBuffer();
-}
-function skipRewrite(idx) {
-  delete appState.acceptedRewrites[idx];
-  updateRewritePairUI(idx, false); updateAcceptedBuffer();
-}
-function updateRewritePairUI(idx, accepted) {
-  const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`); if (!pair) return;
-  const afterBlock = pair.querySelector('.line-after, .line-accepted');
-  if (afterBlock) afterBlock.className = `line-block ${accepted ? 'line-accepted' : 'line-after'}`;
-  const acceptBtn = pair.querySelector('.btn-accept');
-  const skipBtn   = pair.querySelector('.btn-skip');
-  const badge     = pair.querySelector('.applied-badge');
-  if (acceptBtn) { acceptBtn.textContent = accepted ? 'Accepted ✓' : 'Accept'; acceptBtn.classList.toggle('accepted', accepted); }
-  if (skipBtn)   { skipBtn.disabled = !accepted; }
-  if (badge)     { badge.style.display = accepted ? '' : 'none'; }
-}
-function updateAcceptedBuffer() {
-  const { acceptedRewrites, rewrites, lyrics } = appState;
-  if (!Object.keys(acceptedRewrites).length) { $('acceptedBuffer').classList.remove('visible'); return; }
-  let result = lyrics;
-  rewrites.forEach((r, idx) => { if (acceptedRewrites[idx] && r.before) result = result.split(r.before).join(acceptedRewrites[idx]); });
-  $('acceptedBufferBody').textContent = result;
-  $('acceptedBuffer').classList.add('visible');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// History
-// ─────────────────────────────────────────────────────────────────────────────
-function toggleHistory() { $('historyPanel').classList.toggle('open'); }
+// ── History ────────────────────────────────────────────────────────────────
 function renderHistory(history) {
   const row = $('historyRow'), panel = $('historyPanel');
-  if (history.length <= 1) { row.classList.remove('visible'); return; }
-  row.classList.add('visible');
+  if (history.length <= 1) { row.classList.remove('vis'); return; }
+  row.classList.add('vis');
   $('historyLabel').textContent = `${history.length} grades this session`;
   panel.innerHTML = '';
   [...history].reverse().forEach((h, i) => {
     const realIdx = history.length - 1 - i;
-    const prev  = realIdx > 0 ? history[realIdx - 1] : null;
+    const prev = realIdx > 0 ? history[realIdx - 1] : null;
     const delta = prev ? +(h.score - prev.score).toFixed(1) : null;
-    const entry = document.createElement('div');
-    entry.className = 'history-entry';
+    const entry = document.createElement('div'); entry.className = 'hist-entry';
     const time = new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const deltaHtml = delta !== null
+    const dHtml = delta !== null
       ? `<span class="hist-delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'}">${delta > 0 ? '+' : ''}${delta}</span>`
       : '<span class="hist-delta same">baseline</span>';
     entry.innerHTML = `
       <span class="hist-num">${realIdx + 1}</span>
       <span class="hist-score">${h.score}</span>
       <div class="hist-meta">
-        <div class="hist-meta-top">via ${esc(h.model)}${h.ctx ? ` · ${esc(h.ctx.slice(0,40))}` : ''}</div>
-        <div class="hist-meta-time">${time}</div>
-      </div>
-      ${deltaHtml}`;
+        <div class="hist-top">via ${esc(h.model)}${h.ctx ? ` · ${esc(h.ctx.slice(0,40))}` : ''}</div>
+        <div class="hist-time">${time}</div>
+      </div>${dHtml}`;
     panel.appendChild(entry);
   });
 }
-function renderDeltaBanner(history) {
-  const banner = $('deltaBanner');
-  if (history.length < 2) { banner.classList.remove('active'); return; }
-  const curr = history[history.length - 1], prev = history[history.length - 2];
-  if (!curr || !prev) { banner.classList.remove('active'); return; }
-  banner.innerHTML = '';
-  const label = document.createElement('span');
-  label.className = 'delta-label'; label.textContent = 'vs last grade';
-  banner.appendChild(label);
-  const chips = document.createElement('div'); chips.className = 'delta-chips';
-  const od = +(curr.score - prev.score).toFixed(1);
-  const oc = document.createElement('div'); oc.className = 'delta-chip';
-  oc.innerHTML = `<span class="lbl">Overall</span> <span class="val ${od > 0 ? 'up' : od < 0 ? 'down' : 'same'}">${prev.score} → ${curr.score} (${od > 0 ? '+' : ''}${od})</span>`;
-  chips.appendChild(oc);
-  if (prev.dimensions && curr.dimensions) {
-    curr.dimensions.forEach((dim, i) => {
-      const pd = prev.dimensions[i]; if (!pd) return;
-      const d = +(dim.score - pd.score).toFixed(1); if (d === 0) return;
-      const chip = document.createElement('div'); chip.className = 'delta-chip';
-      chip.innerHTML = `<span class="lbl">${esc(dim.label.split(' ')[0])}</span><span class="val ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
-      chips.appendChild(chip);
-    });
-  }
-  banner.appendChild(chips);
-  banner.classList.add('active');
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Render results
-// ─────────────────────────────────────────────────────────────────────────────
-function renderResults(grade, modelName, rewriteModelName, rewrites, fullSong, mode, history, targetSections) {
-  renderDeltaBanner(history);
-  renderHistory(history);
-  $('partialNotice').classList.remove('active');
-
-  $('resultsContext').textContent = appState.ctx || 'No context provided';
-  const num = $('overallNum');
-  num.textContent = grade.overall;
-  num.className = 'grade-num' + (grade.overall >= 8.5 ? ' high' : grade.overall >= 6.5 ? ' mid' : ' low');
-
-  const rewriteTag = rewriteModelName && rewriteModelName !== modelName ? ` · rewrites via ${rewriteModelName}` : '';
-  $('modelTag').textContent = `graded via ${modelName}${rewriteTag}`;
-
-  const ode = $('overallDelta');
-  if (history.length >= 2) {
-    const prev = history[history.length - 2];
-    const d = +(grade.overall - prev.score).toFixed(1);
-    ode.textContent = d > 0 ? `▲ +${d} from last` : d < 0 ? `▼ ${d} from last` : '— no change';
-    ode.className = `grade-delta ${d > 0 ? 'up' : d < 0 ? 'down' : 'same'}`;
-  } else { ode.textContent = ''; }
-
-  // Score grid
-  const grid = $('scoreGrid'); grid.innerHTML = '';
-  const prevGrade = history.length >= 2 ? history[history.length - 2] : null;
-  grade.dimensions.forEach((dim, i) => {
-    const pct = Math.min(100, Math.max(0, (dim.score / 10) * 100)).toFixed(1);
-    const cell = document.createElement('div');
-    cell.className = 'score-cell';
-    cell.style.animationDelay = `${i * 60}ms`;
-    let deltaHtml = '';
-    if (prevGrade && prevGrade.dimensions && prevGrade.dimensions[i]) {
-      const d = +(dim.score - prevGrade.dimensions[i].score).toFixed(1);
-      if (d !== 0) deltaHtml = `<div class="score-delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</div>`;
-    }
-    cell.innerHTML = `
-      <div class="score-fill-bg" data-pct="${pct}"></div>
-      <div class="score-cell-label">${esc(dim.label)}</div>
-      <div class="score-cell-num">${esc(String(dim.score))}</div>
-      ${deltaHtml}
-      <div class="score-cell-note">${esc(dim.note)}</div>`;
-    grid.appendChild(cell);
-  });
-  setTimeout(() => {
-    document.querySelectorAll('.score-fill-bg').forEach(el => { el.style.height = el.dataset.pct + '%'; });
-  }, 20);
-
-  $('verdictText').textContent = grade.verdict;
-
-  // Flags
-  const flagsEl = $('primaryFlags'); flagsEl.innerHTML = '';
-  if (grade.primary_flags) {
-    const f = grade.primary_flags;
-    [{ label: 'Show vs Tell', value: f.show_vs_tell }, { label: 'Interchangeable', value: f.interchangeable }, { label: 'Filler', value: f.filler }].forEach(flag => {
-      if (!flag.value || flag.value === 'none') { const empty = document.createElement('div'); empty.className = 'flag-cell'; flagsEl.appendChild(empty); return; }
-      const cell = document.createElement('div'); cell.className = 'flag-cell';
-      cell.innerHTML = `<div class="flag-type">${esc(flag.label)}</div><div class="flag-quote">"${esc(flag.value)}"</div>`;
-      flagsEl.appendChild(cell);
-    });
-  }
-
-  // Checklist
-  const cl = grade.checklist || {}, clBlock = $('checklistBlock'); clBlock.innerHTML = '';
-  const cohClass = { yes: 'yes', partial: 'partial', no: 'no' }[cl.cohesion?.toLowerCase()] || 'partial';
-  const imgClass = { fresh: 'fresh', mixed: 'mixed', generic: 'generic' }[cl.imagery_quality?.toLowerCase()] || 'mixed';
-  [
-    { label: 'Central Idea', val: cl.central_idea || '—', kind: 'text' },
-    { label: 'Cohesion',     val: cl.cohesion || '—',     kind: 'badge', cls: cohClass },
-    { label: 'Imagery',      val: cl.imagery_quality || '—', kind: 'badge', cls: imgClass },
-    { label: 'Prosody Issue',val: cl.prosody_issues && cl.prosody_issues !== 'none' ? `"${cl.prosody_issues}"` : 'None', kind: 'text' },
-    { label: 'Most Memorable', val: cl.most_memorable_line || '—', kind: 'memorable' },
-  ].forEach(item => {
-    const cell = document.createElement('div'); cell.className = 'checklist-cell';
-    let inner = `<div class="cl-label">${esc(item.label)}</div>`;
-    if (item.kind === 'badge')     inner += `<div><span class="cl-badge ${item.cls}">${esc(item.val)}</span></div>`;
-    else if (item.kind === 'memorable') inner += `<div class="cl-memorable">${esc(item.val)}</div>`;
-    else                           inner += `<div class="cl-val">${esc(item.val)}</div>`;
-    cell.innerHTML = inner;
-    clBlock.appendChild(cell);
-  });
-
-  // Mode sections
-  $('surgicalSection').style.display = mode === 'surgical' ? '' : 'none';
-  $('fullSection').style.display     = mode === 'full' ? '' : 'none';
-
-  if (mode === 'surgical') {
-    $('surgicalCountTag').textContent   = rewrites.length ? `${rewrites.length} fixed` : '—';
-    $('surgicalMasterDesc').textContent = rewrites.length
-      ? `${rewrites.length} weakest line${rewrites.length > 1 ? 's' : ''} rewritten. Accept, skip, or regenerate each.`
-      : 'No rewrites generated — try again.';
-    const rList = $('rewriteResultsList'); rList.innerHTML = '';
-    appState.acceptedRewrites = {};
-    if (!rewrites.length) {
-      rList.innerHTML = '<p style="color:var(--text-3);font-size:.87rem;padding:16px 0">No rewrites generated. Check above for details.</p>';
-    } else {
-      rewrites.forEach((r, idx) => {
-        const pair = document.createElement('div');
-        pair.className = 'rewrite-pair';
-        pair.dataset.rewriteIdx = idx;
-        rList.appendChild(pair);
-        renderRewritePairInto(pair, idx, r);
-      });
-    }
-    $('acceptedBuffer').classList.remove('visible');
-  }
-
-  if (mode === 'full') {
-    const scopeLabel = targetSections && targetSections.length ? targetSections.join(', ') : 'Full Song';
-    $('fullScopeTag').textContent   = scopeLabel;
-    $('fullMasterDesc').textContent = targetSections && targetSections.length
-      ? `Rewritten: ${targetSections.join(', ')}. All other sections preserved.`
-      : 'Every weak line elevated. Strong lines preserved. Same world, sharper language.';
-    $('fullRewriteBody').textContent = fullSong || 'Rewrite failed — try again.';
-  }
-
-  const aList = $('actionList'); aList.innerHTML = '';
-  grade.actions.forEach(a => { const li = document.createElement('li'); li.textContent = a; aList.appendChild(li); });
-}
-
-function renderRewritePair(idx, r) {
-  const pair = document.querySelector(`[data-rewrite-idx="${idx}"]`); if (!pair) return;
-  pair.innerHTML = ''; renderRewritePairInto(pair, idx, r);
-}
-
-function renderRewritePairInto(pair, idx, r) {
-  const isAccepted = !!appState.acceptedRewrites[idx];
-  const anchor       = r.world_anchor ? `<div class="world-anchor">⬡ ${esc(r.world_anchor)}</div>` : '';
-  const repairedTag  = r.auto_repaired ? `<div class="auto-repaired-tag">↺ Auto-repaired</div>` : '';
-  const roleTag      = r.structural_role ? `<div class="structural-role"><span class="structural-role-label">Role</span>${esc(r.structural_role)}</div>` : '';
-  const sylWarning   = (!r.syllable_pass && r.syllable_violation) ? `<div class="violation-warn">⚠ Syllable mismatch: ${esc(r.syllable_violation)} — regenerate</div>` : '';
-  const adjWarning   = (!r.adjacency_clear && r.adjacency_violation) ? `<div class="violation-warn">⚠ Adjacency: ${esc(r.adjacency_violation)}</div>` : '';
-  const vtWarning    = (!r.verbatim_clear && r.verbatim_violation) ? `<div class="violation-warn">⚠ Duplicate: ${esc(r.verbatim_violation)}</div>` : '';
-  const synWarning   = (!r.synonym_clear && r.synonym_violation) ? `<div class="syn-warn">↺ Synonym swap: ${esc(r.synonym_violation)} — regenerate</div>` : '';
-
-  let sylBadge = '';
-  if (r.syllable_delta !== null && r.syllable_delta !== undefined) {
-    const d = r.syllable_delta, sign = d > 0 ? '+' : '';
-    const cls = (!r.syllable_pass) ? 'fail' : Math.abs(d) > 1 ? 'warn' : 'ok';
-    sylBadge = `<span class="syl-badge ${cls}" title="Client syllable count">${sign}${d} syl</span>`;
-  }
-
-  pair.innerHTML = `
-    ${repairedTag}${anchor}${roleTag}${sylWarning}${adjWarning}${vtWarning}${synWarning}
-    <div class="line-cols">
-      <div class="line-block line-before">
-        <div class="line-tag">Original</div>
-        <div class="line-text">${esc(r.before)}</div>
-        <button class="copy-line-btn js-copy-before">Copy</button>
-      </div>
-      <div class="line-block ${isAccepted ? 'line-accepted' : 'line-after'}">
-        <div class="line-tag">Master Rewrite</div>
-        <div class="line-text">${esc(r.after)}</div>
-        <button class="copy-line-btn js-copy-after">Copy</button>
-      </div>
-    </div>
-    ${r.why ? `<div class="why-block">${esc(r.why)}</div>` : ''}
-    <div class="rewrite-actions">
-      <button class="btn-accept${isAccepted ? ' accepted' : ''}" data-idx="${idx}">${isAccepted ? 'Accepted ✓' : 'Accept'}</button>
-      <button class="btn-skip" data-idx="${idx}"${!isAccepted ? ' disabled' : ''}>Skip</button>
-      <button class="btn-regen" data-idx="${idx}">↻ Regen</button>
-      ${sylBadge}
-      <span class="applied-badge" style="display:${isAccepted ? '' : 'none'}">Applied</span>
-    </div>`;
-
-  const beforeBtn = pair.querySelector('.js-copy-before');
-  const afterBtn  = pair.querySelector('.js-copy-after');
-  if (beforeBtn) beforeBtn.addEventListener('click', () => copyText(beforeBtn, r.before));
-  if (afterBtn)  afterBtn.addEventListener('click',  () => copyText(afterBtn,  r.after));
-
-  pair.querySelectorAll('.btn-accept').forEach(btn => btn.addEventListener('click', () => acceptRewrite(parseInt(btn.dataset.idx))));
-  pair.querySelectorAll('.btn-skip').forEach(btn => btn.addEventListener('click', () => skipRewrite(parseInt(btn.dataset.idx))));
-  pair.querySelectorAll('.btn-regen').forEach(btn => btn.addEventListener('click', () => regenLine(parseInt(btn.dataset.idx))));
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Regrade / reset
-// ─────────────────────────────────────────────────────────────────────────────
-function regradeFromResults() {
-  $('lyrics').value = appState.lyrics;
-  $('context').value = appState.ctx;
-  $('charCount').textContent = `${appState.lyrics.length.toLocaleString()} ch`;
-  parseSectionsFromInput();
-  showPhase('phaseInput');
-}
+// ── Reset ──────────────────────────────────────────────────────────────────
 function resetAll() {
-  const savedCtx = $('context').value, savedHistory = appState.gradeHistory;
-  appState = { gradeResult: null, usedModel: null, rewriteModel: null, rewrites: [], fullSong: '', mode: 'surgical', ctx: '', lyrics: '', acceptedRewrites: {}, gradeHistory: savedHistory, parsedSections: [], selectedSections: [] };
-  $('lyrics').value = ''; $('charCount').textContent = '0 ch'; $('context').value = savedCtx;
-  $('rewriteResultsList').innerHTML = ''; $('fullRewriteBody').textContent = ''; $('actionList').innerHTML = '';
-  $('scoreGrid').innerHTML = ''; $('primaryFlags').innerHTML = ''; $('checklistBlock').innerHTML = '';
-  const chips = $('sectionChips'); chips.innerHTML = '';
-  const allChip = document.createElement('span'); allChip.className = 'section-chip selected'; allChip.dataset.section = 'all'; allChip.textContent = 'All'; allChip.addEventListener('click', toggleSectionAll); chips.appendChild(allChip);
-  $('sectionPicker').classList.remove('visible'); $('rewriteScope').value = 'full';
-  $('deltaBanner').classList.remove('active'); $('historyRow').classList.remove('visible'); $('historyPanel').innerHTML = ''; $('historyPanel').classList.remove('open');
-  $('sectionLabelHint').classList.remove('visible');
-  const rn = $('repairNotice'); if (rn) rn.classList.remove('active');
+  const saved = state.gradeHistory;
+  state = { gradeResult: null, usedModel: null, ctx: '', lyrics: '', gradeHistory: saved };
+  $('lyrics').value = ''; $('charCount').textContent = '0';
+  $('dimsList').innerHTML = ''; $('flagsGrid').innerHTML = ''; $('checklistGrid').innerHTML = '';
+  $('verdictText').textContent = ''; $('overallNum').textContent = '—'; $('overallNum').className = 'overall-num';
+  $('deltaBanner').classList.remove('active'); $('historyRow').classList.remove('vis');
+  $('historyPanel').innerHTML = ''; $('historyPanel').classList.remove('open');
   clearError(); setStatus(''); showPhase('phaseInput');
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Copy
-// ─────────────────────────────────────────────────────────────────────────────
-function copyText(btn, text) {
-  const orig = btn.textContent;
-  const done = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig === 'Copied!' ? 'Copy' : orig; btn.classList.remove('copied'); }, 2000); };
-  navigator.clipboard.writeText(text).then(done).catch(() => {
-    const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
-  });
-}
-function copyAllRewrites() {
-  if (!appState.rewrites.length) return;
-  const text = appState.rewrites.map(r => `Original: ${r.before}\nRewrite: ${r.after}${r.why ? `\nWhy: ${r.why}` : ''}`).join('\n\n');
-  copyText($('copyAllBtn'), text);
-}
-function copyFullSong() { if (appState.fullSong) copyText($('copyFullBtn'), appState.fullSong); }
-function copyBuffer() { const text = $('acceptedBufferBody').textContent; if (text) copyText($('copyBufferBtn'), text); }
 </script>
 </body>
 </html>
