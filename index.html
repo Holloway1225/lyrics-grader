@@ -753,26 +753,24 @@ GRADING RUBRIC — seven dimensions, each scored 1–10:
    High: Multiple lines that stop you. Phrasing you can still hear after you stop reading.
    Test: What line will you remember in a week?
 
-For EACH dimension, provide 2–4 path-to-10 steps. These are surgical instructions, not encouragement.
+For EACH dimension, provide 2–3 path-to-10 steps. These are surgical instructions, not encouragement.
 
-MANDATORY FORMAT FOR EVERY STEP:
-1. Quote the specific line verbatim in quotes.
-2. Name the exact failure — not a category, the actual thing wrong. Examples of acceptable failures: "the word 'feeling' is doing emotional work that an image should do", "'locking every exit door' is a borrowed phrase — it has appeared in a hundred other songs about being trapped", "the stressed syllable falls on 'is' not 'lock' — the meter fights the meaning", "'found religion' is a dead metaphor, it carries no weight".
-3. Give the specific direction to fix it. Not "be more specific" — say what kind of specific. Not "find a fresher image" — say what domain to look in, what the line is trying to do, what it needs to show instead of say. Example directions: "the line is trying to say time is inescapable — find the physical object in this song's world that already represents containment and make time act on that instead", "cut everything after the comma — the line lands on 'numb', everything after explains what the listener should feel for themselves", "the rhyme pair 'new/into' is forcing a full stop where the feeling should still be moving — find a rhyme that lands softer or cut the rhyme entirely".
+MANDATORY FORMAT FOR EVERY STEP — three parts, separated by em-dashes:
+1. Quote the specific line verbatim in double quotes.
+2. Name the exact mechanical failure at the level of the specific word or phrase — not a category verdict. BAD: "this metaphor is overused." GOOD: "'found religion' activates no physical picture in the listener's mind — it's an idiom, not an image." BAD: "this line feels generic." GOOD: "'becoming a feeling' names an emotional category instead of a physical event — 'feeling' has no texture, weight, or location." The diagnosis must be so specific that it could not apply to any other line in any other song.
+3. Give the exact direction. The direction names what the line is trying to do and what mechanism will fix it. It does NOT use the words: "consider", "think about", "try", "explore", "experiment", "replace with something", "find a fresher", "add more". Instead it commands: "cut", "find the object in this song's world that already does X and make it do Y instead", "the stressed syllable must fall on Z — restructure the phrase so Z lands on the downbeat", "the rhyme forces a stop where the line should keep moving — cut the rhyme".
 
-CRITICAL — NO EXAMPLE REWRITES: Do NOT complete any step with "such as '…'", "for example '…'", "like '…'", or any demonstration of what the new line could sound like. The direction must point at the problem and name the fix without writing the fix. The moment you write a sample line, you have done the writer's work for them and the step loses all value. Every step ends at the direction. Full stop.
+CRITICAL — NO EXAMPLE REWRITES: Do NOT write what the new line could sound like. No "such as '…'", no "for example '…'", no sample lines in quotes. The direction ends at the mechanical instruction. The writer does the writing.
 
-BANNED STEPS — reject any step that contains these phrases or their equivalents:
-- "be more specific" / "add more detail" / "amplify the unique aspects"
-- "replace clichéd phrases with fresh expressions"
-- "experiment with metaphors" (too vague — must name the domain)
-- "refine the language" / "polish the phrasing"
-- "trust the listener" (without naming the line that doesn't)
-- "add sensory details" (without naming what sense is missing and in which line)
-- Any step that could apply to a different song without changing a single word
-- Any step that ends with a sample rewrite in quotes
+BANNED STEP LANGUAGE — any step using these words or constructions fails and must be replaced:
+- "consider", "think about", "try adding", "you might", "perhaps"
+- "overused" / "a bit clichéd" / "feels familiar" / "been used before" (verdict without diagnosis)
+- "more unique" / "fresher" / "more original" (direction without mechanism)
+- "add more context" / "add more details" / "add more specificity" (direction without naming what)
+- "replace with a more unique image or concept" (direction without naming the mechanism)
+- Any step where removing the quoted line would leave a step that applies to a different song
 
-If a dimension is already at 9–10, the steps must still name the one or two lines preventing a clean 10 and say exactly what they need.
+If a dimension is already at 9–10, the steps must still name the one or two lines preventing a clean 10 and diagnose them at the word level.
 
 Song context: "${ctx || 'None provided'}"
 
@@ -878,6 +876,12 @@ function parseGrade(text) {
   if (!d.verdict) throw new Error('Missing verdict');
   if (!d.primary_flags) d.primary_flags = {};
   if (!d.checklist) d.checklist = {};
+  // Sanitize path_to_10 steps — strip any "such as '…'" tails the model snuck in
+  d.dimensions.forEach(dim => {
+    if (Array.isArray(dim.path_to_10)) {
+      dim.path_to_10 = dim.path_to_10.map(sanitizeStep).filter(Boolean);
+    }
+  });
   // Always recompute overall from dimensions in JS — don't trust model arithmetic
   d.overall = computeOverall(d.dimensions);
   return d;
