@@ -155,7 +155,7 @@
     <div class="kicker">Cryptid Static · Signal Tools</div>
     <h1><span class="glitch" data-t="LYRICS GRADER">LYRICS GRADER</span></h1>
     <p class="sub">Seven-dimension rubric · per-category <b>path to 10/10</b> · no rewrites.</p>
-    <div class="ver">v2.3</div>
+    <div class="ver">v2.4</div>
   </header>
 
   <div class="card">
@@ -324,10 +324,17 @@ async function callGemini(key,prompt,signal,retries){
   const d=await res.json();return{text:d.candidates[0].content.parts[0].text,model:GEMINI_MODEL_LABEL};
 }
 async function callClaude(key,prompt,signal,retries){
-  const res=await fetchRetry('https://api.anthropic.com/v1/messages',
-    {method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-     body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:6000,temperature:0.65,messages:[{role:'user',content:prompt}]})},signal,retries);
-  if(!res.ok){const e=await res.json().catch(()=>({}));throw Object.assign(new Error(e?.error?.message||`Anthropic ${res.status}`),{status:res.status});}
+  let res;
+  try{
+    res=await fetchRetry('https://api.anthropic.com/v1/messages',
+      {method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+       body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:6000,temperature:0.65,messages:[{role:'user',content:prompt}]})},signal,retries);
+  }catch(e){
+    if(e.name==='AbortError')throw e;
+    // A raw "Failed to fetch" / TypeError here is almost always the browser blocking the cross-origin call (CORS)
+    throw new Error('browser blocked the request (CORS) — Anthropic can\'t be called directly from this page');
+  }
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw Object.assign(new Error(e?.error?.message||`HTTP ${res.status}`),{status:res.status});}
   const d=await res.json();return{text:d.content.filter(b=>b.type==='text').map(b=>b.text).join(''),model:CLAUDE_LABEL};
 }
 const KEY_FOR={groq:'groq',gemini:'gemini',claude:'anthropic'};
@@ -342,22 +349,22 @@ async function callAPI(keys,prompt,signal,retries){
     throw new Error(`You picked ${LABEL_FOR[pref]} as the grader but no ${LABEL_FOR[pref]} API key is entered below. Add the key, or switch the Grader dropdown to a model you have a key for.`);
   }
 
-  let usedFallback=false;
+  let usedFallback=false, prefError='';
   for(const provider of order){
     if(signal.aborted)throw new DOMException('Aborted','AbortError');
     const isPreferred=(provider===pref);
     if(provider==='groq'&&keys.groq){
       for(let i=0;i<GROQ_MODELS.length;i++){
         if(signal.aborted)throw new DOMException('Aborted','AbortError');
-        try{const r=await callGroq(keys.groq,prompt,i,signal,retries);if(usedFallback)r.fellBack=`${LABEL_FOR[pref]} unavailable — graded on Llama instead`;return r;}
-        catch(e){if(e.name==='AbortError')throw e;errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`);if(e.status===401||e.status===403)break;}
+        try{const r=await callGroq(keys.groq,prompt,i,signal,retries);if(usedFallback)r.fellBack=`Couldn't reach ${LABEL_FOR[pref]} (${prefError}) — graded on Llama instead`;return r;}
+        catch(e){if(e.name==='AbortError')throw e;errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`);if(isPreferred)prefError=e.message;if(e.status===401||e.status===403)break;}
       }
     }else if(provider==='gemini'&&keys.gemini){
-      try{const r=await callGemini(keys.gemini,prompt,signal,retries);if(usedFallback)r.fellBack=`${LABEL_FOR[pref]} unavailable — graded on Gemini instead`;return r;}
-      catch(e){if(e.name==='AbortError')throw e;errors.push(`Gemini: ${e.message}`);}
+      try{const r=await callGemini(keys.gemini,prompt,signal,retries);if(usedFallback)r.fellBack=`Couldn't reach ${LABEL_FOR[pref]} (${prefError}) — graded on Gemini instead`;return r;}
+      catch(e){if(e.name==='AbortError')throw e;errors.push(`Gemini: ${e.message}`);if(isPreferred)prefError=e.message;}
     }else if(provider==='claude'&&keys.anthropic){
-      try{const r=await callClaude(keys.anthropic,prompt,signal,retries);if(usedFallback)r.fellBack=`${LABEL_FOR[pref]} unavailable — graded on Claude instead`;return r;}
-      catch(e){if(e.name==='AbortError')throw e;errors.push(`Claude: ${e.message}`);}
+      try{const r=await callClaude(keys.anthropic,prompt,signal,retries);if(usedFallback)r.fellBack=`Couldn't reach ${LABEL_FOR[pref]} (${prefError}) — graded on Claude instead`;return r;}
+      catch(e){if(e.name==='AbortError')throw e;errors.push(`Claude: ${e.message}`);if(isPreferred)prefError=e.message;}
     }
     // mark that we've now moved past the preferred provider
     if(isPreferred)usedFallback=true;
