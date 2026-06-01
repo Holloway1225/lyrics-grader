@@ -100,10 +100,11 @@ h1 em { font-style: italic; color: var(--signal); }
   display: flex; align-items: center; gap: 10px;
 }
 .version-badge {
-  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--text-4);
-  border: 1px solid var(--border-2); border-radius: 3px;
-  padding: 2px 7px; display: inline-block;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.16em; font-weight: 500;
+  text-transform: uppercase; color: var(--signal);
+  border: 1px solid var(--signal-bd); border-radius: 4px;
+  padding: 3px 9px; display: inline-block;
+  background: var(--signal-bg);
 }
 
 /* ── PHASE ── */
@@ -408,7 +409,7 @@ footer {
   <h1>Lyrics <em>Grader</em></h1>
   <div class="header-sub">
     Seven-dimension rubric · Per-category path to 10/10 · No rewrites
-    <span class="version-badge">v2.0</span>
+    <span class="version-badge">v2.1</span>
   </div>
 </header>
 
@@ -527,7 +528,7 @@ footer {
 
 </div><!-- /wrap -->
 
-<footer>Lyrics Grader v2.0 · Seven-dimension rubric · Nothing stored server-side</footer>
+<footer>Lyrics Grader v2.1 · Seven-dimension rubric · Nothing stored server-side</footer>
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -778,12 +779,12 @@ SEVEN DIMENSIONS — score each 1–10:
 
 SCORING: 7 = solid, some filler. 9 = elite, 1–2 weak lines. 10 = every line necessary, no filler.
 
-PATH-TO-10 — exactly 2 steps per dimension. Each step is three parts separated by em-dashes, no exceptions:
+PATH-TO-10 — 1 to 3 steps per dimension. Only flag lines that ACTUALLY fail. If a dimension scores 9 because only one line holds it back, give ONE step. Do not invent a second weakness to fill a quota — a fabricated failure on a strong line is worse than no step at all. If a line is already concrete, vivid, and doing its work, leave it alone. Each step is three parts separated by em-dashes, no exceptions:
   "VERBATIM LINE" — EXACT MECHANICAL FAILURE at the word level — COMMAND naming the fix mechanism
 
 Failure diagnosis MUST follow this template: "the word/phrase '[X]' [does Y / fails to do Y] because [specific reason at the level of the listener's sensory or cognitive experience]." Accepted: "'feeling' names a category — it has no texture, weight, or location in the listener's mind." "'found religion' is an idiom — it processes as 'transformed' and produces no image." "'slowly' tells the listener how to experience the image instead of letting the image move at its own speed." Rejected: "could be more evocative", "feels slightly generic", "fails to evoke a specific memory", "could be more distinctive" — these are quality verdicts, not mechanical diagnoses.
 Command: use cut / find X already in this song's world and make it do Y / restructure so stressed syllable falls on Z / the rhyme forces a stop — cut it. Banned: consider, try, explore, perhaps, add more, replace with something, could be more, make it more. NEVER write the replacement line — no "replace with 'new words'", no "cut X and replace with 'Y'". The command says what to do, never what to write. When you say "find X already in this song's world", X must be a phrase that ACTUALLY appears in the lyrics above — never invent a phrase like "a unique expression of loss" that isn't really there. No example rewrites. No "such as". Direction ends at the period.
-Test: remove the quoted line from the step — if the failure and command still apply to a line in a different song unchanged, the diagnosis is not specific enough.
+Test: remove the quoted line from the step — if the failure and command still apply to a line in a different song unchanged, the diagnosis is not specific enough. Second test: if you cannot name a real mechanical failure in a line, that line gets NO step — a 10/10 dimension with zero steps is a valid, honest answer.
 
 PRIMARY FLAGS — verbatim line only, zero annotation:
 show_vs_tell: line that states emotion instead of showing it
@@ -809,8 +810,7 @@ The JSON must match this structure exactly — fill in every placeholder:
       "score": 0,
       "note": "FILL: 1-2 sentences citing strongest and weakest line verbatim",
       "path_to_10": [
-        "FILL: verbatim line — the word/phrase X fails because Y in the listener's mind — command",
-        "FILL: verbatim line — the word/phrase X fails because Y in the listener's mind — command"
+        "FILL: verbatim line — the word/phrase X fails because Y in the listener's mind — command (1 to 3 of these, ONLY for lines that genuinely fail; omit the array entirely or leave fewer if the dimension is clean)"
       ]
     },
     {
@@ -1012,8 +1012,11 @@ function renderResults(grade, modelName, history) {
 
     const pathItems = Array.isArray(dim.path_to_10) ? dim.path_to_10 : [];
     let pathHtml;
-    if (isMaxed) {
-      pathHtml = `<div class="dim-path-block"><span class="perfect-badge">✓ Nothing to fix at this level — preserve what's here</span></div>`;
+    if (isMaxed || pathItems.length === 0) {
+      const msg = isMaxed
+        ? "✓ Nothing to fix at this level — preserve what's here"
+        : "✓ No weak lines flagged — every line here is doing its work";
+      pathHtml = `<div class="dim-path-block"><span class="perfect-badge">${msg}</span></div>`;
     } else {
       pathHtml = `
         <div class="dim-path-block">
