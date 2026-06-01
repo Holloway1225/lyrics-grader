@@ -155,7 +155,7 @@
     <div class="kicker">Cryptid Static · Signal Tools</div>
     <h1><span class="glitch" data-t="LYRICS GRADER">LYRICS GRADER</span></h1>
     <p class="sub">Seven-dimension rubric · per-category <b>path to 10/10</b> · no rewrites.</p>
-    <div class="ver">v2.2</div>
+    <div class="ver">v2.3</div>
   </header>
 
   <div class="card">
@@ -330,23 +330,37 @@ async function callClaude(key,prompt,signal,retries){
   if(!res.ok){const e=await res.json().catch(()=>({}));throw Object.assign(new Error(e?.error?.message||`Anthropic ${res.status}`),{status:res.status});}
   const d=await res.json();return{text:d.content.filter(b=>b.type==='text').map(b=>b.text).join(''),model:CLAUDE_LABEL};
 }
+const KEY_FOR={groq:'groq',gemini:'gemini',claude:'anthropic'};
+const LABEL_FOR={groq:'Llama (Groq)',gemini:'Gemini',claude:'Claude'};
 async function callAPI(keys,prompt,signal,retries){
   const errors=[];
   const pref=$('graderModel').value;
   const order=pref==='claude'?['claude','groq','gemini']:pref==='gemini'?['gemini','groq','claude']:['groq','gemini','claude'];
+
+  // If the chosen grader has no key, say so loudly instead of silently using another model.
+  if(!keys[KEY_FOR[pref]]){
+    throw new Error(`You picked ${LABEL_FOR[pref]} as the grader but no ${LABEL_FOR[pref]} API key is entered below. Add the key, or switch the Grader dropdown to a model you have a key for.`);
+  }
+
+  let usedFallback=false;
   for(const provider of order){
     if(signal.aborted)throw new DOMException('Aborted','AbortError');
+    const isPreferred=(provider===pref);
     if(provider==='groq'&&keys.groq){
       for(let i=0;i<GROQ_MODELS.length;i++){
         if(signal.aborted)throw new DOMException('Aborted','AbortError');
-        try{return await callGroq(keys.groq,prompt,i,signal,retries);}
+        try{const r=await callGroq(keys.groq,prompt,i,signal,retries);if(usedFallback)r.fellBack=`${LABEL_FOR[pref]} unavailable — graded on Llama instead`;return r;}
         catch(e){if(e.name==='AbortError')throw e;errors.push(`Groq/${GROQ_MODELS[i]}: ${e.message}`);if(e.status===401||e.status===403)break;}
       }
     }else if(provider==='gemini'&&keys.gemini){
-      try{return await callGemini(keys.gemini,prompt,signal,retries);}catch(e){if(e.name==='AbortError')throw e;errors.push(`Gemini: ${e.message}`);}
+      try{const r=await callGemini(keys.gemini,prompt,signal,retries);if(usedFallback)r.fellBack=`${LABEL_FOR[pref]} unavailable — graded on Gemini instead`;return r;}
+      catch(e){if(e.name==='AbortError')throw e;errors.push(`Gemini: ${e.message}`);}
     }else if(provider==='claude'&&keys.anthropic){
-      try{return await callClaude(keys.anthropic,prompt,signal,retries);}catch(e){if(e.name==='AbortError')throw e;errors.push(`Claude: ${e.message}`);}
+      try{const r=await callClaude(keys.anthropic,prompt,signal,retries);if(usedFallback)r.fellBack=`${LABEL_FOR[pref]} unavailable — graded on Claude instead`;return r;}
+      catch(e){if(e.name==='AbortError')throw e;errors.push(`Claude: ${e.message}`);}
     }
+    // mark that we've now moved past the preferred provider
+    if(isPreferred)usedFallback=true;
   }
   throw new Error(errors[errors.length-1]||'No API key available for the selected grader.');
 }
@@ -445,7 +459,7 @@ async function doGrade(){
   try{
     const r=await callAPI(keys,buildPrompt(clean(ctx),clean(lyrics)),signal,retries);
     const grade=parseGrade(r.text);
-    setStatus('');
+    if(r.fellBack){setStatus('⚠ '+r.fellBack,true);}else{setStatus('');}
     const prev=lastGrade;
     renderResults(grade,r.model,prev,ctx);
     lastGrade={overall:grade.overall,dimensions:grade.dimensions};
