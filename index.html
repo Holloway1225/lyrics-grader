@@ -77,6 +77,8 @@
   .sec{background:linear-gradient(180deg,var(--panel),#0a0e13);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:14px;animation:rise .5s ease both;}
   .sec h2{font-family:'Major Mono Display',monospace;font-size:14px;color:var(--cyan);letter-spacing:.05em;margin-bottom:14px;text-transform:lowercase;}
   .verdict{font-size:14px;line-height:1.75;color:var(--text);}
+  .uf-note{font-size:14px;line-height:1.8;color:var(--white);background:rgba(57,230,224,0.04);border-left:3px solid var(--cyan);border-radius:0 9px 9px 0;padding:13px 16px;margin-bottom:10px;}
+  .uf-note:last-child{margin-bottom:0;}
 
   .flags{display:grid;grid-template-columns:1fr;gap:9px;}
   .flag{background:#05070a;border:1px solid var(--line);border-left:3px solid var(--red);border-radius:9px;padding:11px 13px;}
@@ -155,7 +157,7 @@
     <div class="kicker">Cryptid Static · Signal Tools</div>
     <h1><span class="glitch" data-t="LYRICS GRADER">LYRICS GRADER</span></h1>
     <p class="sub">Seven-dimension rubric · per-category <b>path to 10/10</b> · no rewrites.</p>
-    <div class="ver">v2.5</div>
+    <div class="ver">v2.6</div>
   </header>
 
   <div class="card">
@@ -399,6 +401,11 @@ show_vs_tell: line that states emotion instead of showing it
 interchangeable: line with no fingerprint — swappable with any song on same theme
 filler: line weakest for compression — most words, least meaning added
 
+UNFORGETTABLE — 1 to 2 closing notes. This is the most important section and the hardest. Step back from the line-level scoring entirely. These notes must NOT restate any path_to_10 fix or name any specific weak line — they are forbidden from being about fixing flawed lines. Instead, name what separates elite craft from a song that haunts the listener. Two angles to consider:
+- THE WOUND: does the song make the listener feel the condition but not the injury that caused it? A technically flawless song about a state of being often understands its subject without revealing the human hurt underneath. If the song renders a condition (dissociation, addiction, grief, a split self) with precision but never lets you feel WHY — the originating wound — say so, and point at where one suggested (not explained) revelation could live.
+- THE BREATH: is every line operating at the same intensity/density, leaving no dynamic contrast? If a song is all compression with no open-vowel release, all peak with no valley, all texture with no plain-spoken human moment, the heavy lines stop hitting because nothing sets them off. Name this if it's true.
+Other angles are allowed if more relevant. The test: a note here should make the writer feel something they hadn't seen about their own song — not give them a task. Speak like a producer who loves the song and wants it to be devastating, not a grader filling a field. If the song genuinely has no such gap — if it already lands emotionally and breathes — say that plainly in one note rather than inventing a lack.
+
 Song context: "${ctx||'None provided'}"
 
 LYRICS:
@@ -423,7 +430,8 @@ The JSON must match this structure exactly — fill in every placeholder:
   ],
   "primary_flags": { "show_vs_tell":"FILL: verbatim line only","interchangeable":"FILL: verbatim line only","filler":"FILL: verbatim line only" },
   "checklist": { "central_idea":"FILL: one sentence","cohesion":"yes","imagery_quality":"fresh","prosody_issues":"FILL: verbatim line or none","most_memorable_line":"FILL: verbatim line" },
-  "verdict": "FILL: 2-3 sentences — biggest thing holding it back, then what it takes to reach next tier"
+  "verdict": "FILL: 2-3 sentences — biggest thing holding it back, then what it takes to reach next tier",
+  "unforgettable": ["FILL: closing note 1 — see UNFORGETTABLE rules", "FILL: closing note 2 (or omit if only one)"]
 }`;
 }
 
@@ -559,6 +567,14 @@ function renderResults(grade,model,prev,ctx){
   });
   box.appendChild(ds);
 
+  // unforgettable
+  const uf=Array.isArray(grade.unforgettable)?grade.unforgettable.filter(x=>x&&x.trim()&&!/^FILL/i.test(x)):[];
+  if(uf.length){
+    const us=document.createElement('div');us.className='sec';
+    us.innerHTML=`<h2>between you and unforgettable</h2>`+uf.map(n=>`<div class="uf-note">${esc(n)}</div>`).join('');
+    box.appendChild(us);
+  }
+
   // actions
   const act=document.createElement('div');act.className='sec';
   act.innerHTML=`<h2>actions</h2><div class="btnrow">
@@ -605,6 +621,11 @@ function buildReportText(g,model,ctx){
     if(items.length){L.push('Path to 10/10:');items.forEach((s,i)=>L.push('  '+(i+1)+'. '+s));}
     else L.push('No weak lines flagged.');
   });
+  const uf=Array.isArray(g.unforgettable)?g.unforgettable.filter(x=>x&&x.trim()&&!/^FILL/i.test(x)):[];
+  if(uf.length){
+    L.push('\n'+sep+'\nBETWEEN YOU AND UNFORGETTABLE\n'+sep);
+    uf.forEach(n=>L.push('\n'+n));
+  }
   return L.join('\n');
 }
 
